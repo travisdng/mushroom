@@ -22,9 +22,7 @@ type DialogKind = "about" | "shortcuts" | null;
 export default function MainWindow() {
   const shell = useShell();
   const [dialog, setDialog] = useState<DialogKind>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(240);
-  const [notebookHeight, setNotebookHeight] = useState(220);
-  const [aiWidth, setAiWidth] = useState(320);
+  const { sidebarWidth, notebookHeight, aiWidth } = shell.ui;
   const workAreaRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -51,30 +49,38 @@ export default function MainWindow() {
   const dragSidebar = useCallback(
     (delta: number) => {
       const total = workAreaRef.current?.clientWidth ?? 0;
-      const reserved = EDITOR_MIN + (shell.panels.ai ? aiWidth : 0);
-      setSidebarWidth((w) =>
-        Math.max(SIDEBAR_MIN, Math.min(w + delta, Math.max(SIDEBAR_MIN, total - reserved))),
-      );
+      const reserved = EDITOR_MIN + (shell.ui.showAiPanel ? aiWidth : 0);
+      const max = Math.max(SIDEBAR_MIN, total - reserved);
+      shell.setSizes({
+        sidebarWidth: Math.max(SIDEBAR_MIN, Math.min(sidebarWidth + delta, max)),
+      });
     },
-    [aiWidth, shell.panels.ai],
+    [aiWidth, sidebarWidth, shell],
   );
 
-  const dragNotebook = useCallback((delta: number) => {
-    const total = sidebarRef.current?.clientHeight ?? 0;
-    setNotebookHeight((h) =>
-      Math.max(NOTEBOOK_MIN, Math.min(h + delta, Math.max(NOTEBOOK_MIN, total - NOTEBOOK_MIN))),
-    );
-  }, []);
+  const dragNotebook = useCallback(
+    (delta: number) => {
+      const total = sidebarRef.current?.clientHeight ?? 0;
+      const max = Math.max(NOTEBOOK_MIN, total - NOTEBOOK_MIN);
+      shell.setSizes({
+        notebookHeight: Math.max(
+          NOTEBOOK_MIN,
+          Math.min(notebookHeight + delta, max),
+        ),
+      });
+    },
+    [notebookHeight, shell],
+  );
 
   const dragAi = useCallback(
     (delta: number) => {
       const total = workAreaRef.current?.clientWidth ?? 0;
-      const reserved = EDITOR_MIN + sidebarWidth;
-      setAiWidth((w) =>
-        Math.max(AI_MIN, Math.min(w - delta, Math.max(AI_MIN, total - reserved))),
-      );
+      const max = Math.max(AI_MIN, total - EDITOR_MIN - sidebarWidth);
+      shell.setSizes({
+        aiWidth: Math.max(AI_MIN, Math.min(aiWidth - delta, max)),
+      });
     },
-    [sidebarWidth],
+    [aiWidth, sidebarWidth, shell],
   );
 
   const menus: MenuDef[] = [
@@ -115,21 +121,21 @@ export default function MainWindow() {
           type: "item",
           label: "Notes",
           mnemonic: "N",
-          checked: shell.panels.notes,
+          checked: shell.ui.showNotesPanel,
           onSelect: () => shell.togglePanel("notes"),
         },
         {
           type: "item",
           label: "Search",
           mnemonic: "S",
-          checked: shell.panels.search,
+          checked: shell.ui.showSearchPanel,
           onSelect: () => shell.togglePanel("search"),
         },
         {
           type: "item",
           label: "AI Search",
           mnemonic: "A",
-          checked: shell.panels.ai,
+          checked: shell.ui.showAiPanel,
           onSelect: () => shell.togglePanel("ai"),
         },
         { type: "separator" },
@@ -137,7 +143,7 @@ export default function MainWindow() {
           type: "item",
           label: "Status Bar",
           mnemonic: "B",
-          checked: shell.showStatusBar,
+          checked: shell.ui.showStatusBar,
           onSelect: shell.toggleStatusBar,
         },
       ],
@@ -208,7 +214,7 @@ export default function MainWindow() {
     {
       label: "AI",
       icon: "ai",
-      pressed: shell.panels.ai,
+      pressed: shell.ui.showAiPanel,
       onClick: () => shell.togglePanel("ai"),
     },
   ];
@@ -230,7 +236,7 @@ export default function MainWindow() {
             label="Resize notebook pane"
           />
 
-          {shell.panels.notes ? (
+          {shell.ui.showNotesPanel ? (
             <Panel title="Notes" style={{ flex: "1 1 auto", minHeight: 0 }}>
               <EmptyState text="No notes yet." />
             </Panel>
@@ -247,7 +253,7 @@ export default function MainWindow() {
           <EmptyState text="No note open." />
         </div>
 
-        {shell.panels.ai ? (
+        {shell.ui.showAiPanel ? (
           <>
             <Splitter
               orientation="vertical"

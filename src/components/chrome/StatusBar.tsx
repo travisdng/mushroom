@@ -5,9 +5,9 @@ import { useShell } from "../../hooks/useShell";
  * More cells arrive with the features that need them.
  */
 export function StatusBar() {
-  const { context, status, showStatusBar } = useShell();
+  const { context, status, ui } = useShell();
 
-  if (!showStatusBar) return null;
+  if (!ui.showStatusBar) return null;
 
   return (
     <div className="statusbar" role="status" aria-live="polite">

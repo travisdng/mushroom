@@ -37,3 +37,6 @@ desktop.ini
 # Build artefacts that should come from a release, not the repo
 *.exe
 *.msi
+
+# Machine-local cargo settings (target-dir relocation)
+.cargo/

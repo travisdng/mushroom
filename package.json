@@ -9,7 +9,12 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "check": "npm run check:ts && npm run check:fmt && npm run check:clippy && npm run check:test",
+    "check:ts": "tsc --noEmit",
+    "check:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+    "check:clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+    "check:test": "cargo test --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "react": "^19.1.0",
