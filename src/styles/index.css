@@ -1,3 +1,4 @@
 /* Import order matters: tokens define the variables everything else uses. */
 @import "./tokens.css";
 @import "./reset.css";
+@import "./controls.css";
