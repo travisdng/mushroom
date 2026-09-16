@@ -39,7 +39,7 @@ sha2 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 async-trait = "0.1"
-tokio = { version = "1", features = ["sync", "time", "rt"] }
+tokio = { version = "1", features = ["sync", "time", "rt", "macros"] }
 tokio-util = "0.7"
 # Windows Credential Manager, so the API key never lands in a file.
 keyring = { version = "3", features = ["windows-native"] }

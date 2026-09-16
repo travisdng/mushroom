@@ -72,11 +72,16 @@ pub struct ChatRequest {
     pub max_tokens: Option<u32>,
 }
 
+/// Token counts. Serialised camelCase for the UI, but the wire format is
+/// snake_case, so both spellings are accepted on the way in.
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Usage {
+    #[serde(alias = "prompt_tokens")]
     pub prompt_tokens: u32,
+    #[serde(alias = "completion_tokens")]
     pub completion_tokens: u32,
+    #[serde(alias = "total_tokens")]
     pub total_tokens: u32,
 }
 

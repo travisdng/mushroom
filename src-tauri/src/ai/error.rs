@@ -46,11 +46,12 @@ pub enum AiError {
 
 impl AiError {
     /// True when the failure is worth one automatic retry (R6.5).
+    ///
+    /// Deliberately not a timeout: retrying one makes the user wait the whole
+    /// timeout twice, and someone who set 120 seconds does not expect to sit
+    /// for four minutes before being told it did not work.
     pub fn is_retryable(&self) -> bool {
-        matches!(
-            self,
-            AiError::Connect { .. } | AiError::ServerError { .. } | AiError::Timeout { .. }
-        )
+        matches!(self, AiError::Connect { .. } | AiError::ServerError { .. })
     }
 
     /// Classify a reqwest failure into something a person can act on.
@@ -177,9 +178,8 @@ impl From<AiError> for AppErrorDto {
             AiError::Forbidden { model } => (
                 "AI_FORBIDDEN",
                 "Access denied",
-                format!(
-                    "The service accepted the key but refused the request (403)."
-                ),
+                "The service accepted the key but refused the request (403)."
+                    .to_string(),
                 Some(format!("Check that this key is allowed to use {model}.")),
             ),
 
@@ -343,7 +343,9 @@ mod tests {
         }
         .is_retryable());
         assert!(AiError::ServerError { status: 502 }.is_retryable());
-        assert!(AiError::Timeout { seconds: 10 }.is_retryable());
+
+        // A retried timeout means waiting the whole timeout twice.
+        assert!(!AiError::Timeout { seconds: 10 }.is_retryable());
 
         // Retrying a 4xx just annoys the service and the user.
         assert!(!AiError::Unauthorized.is_retryable());

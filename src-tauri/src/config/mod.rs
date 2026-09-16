@@ -261,27 +261,49 @@ mod tests {
 
     #[test]
     fn chat_url_tolerates_a_trailing_slash() {
-        let mut ai = AiConfig::default();
-        ai.base_url = "http://localhost:4000/v1/".into();
+        let ai = AiConfig {
+            base_url: "http://localhost:4000/v1/".into(),
+            ..AiConfig::default()
+        };
         assert_eq!(ai.chat_url(), "http://localhost:4000/v1/chat/completions");
         assert_eq!(ai.models_url(), "http://localhost:4000/v1/models");
     }
 
     #[test]
     fn validation_rejects_what_would_fail_later() {
-        let bad = |f: fn(&mut AiConfig)| {
-            let mut ai = AiConfig::default();
-            f(&mut ai);
+        let bad = |f: fn(AiConfig) -> AiConfig| {
+            let ai = f(AiConfig::default());
             assert!(ai.validate().is_err(), "should have been rejected");
         };
 
-        bad(|a| a.base_url = String::new());
-        bad(|a| a.base_url = "localhost:4000".into());
-        bad(|a| a.base_url = "ftp://localhost".into());
-        bad(|a| a.model = "  ".into());
-        bad(|a| a.timeout_secs = 0);
-        bad(|a| a.temperature = 5.0);
-        bad(|a| a.max_context_tokens = 10);
+        bad(|a| AiConfig {
+            base_url: String::new(),
+            ..a
+        });
+        bad(|a| AiConfig {
+            base_url: "localhost:4000".into(),
+            ..a
+        });
+        bad(|a| AiConfig {
+            base_url: "ftp://localhost".into(),
+            ..a
+        });
+        bad(|a| AiConfig {
+            model: "  ".into(),
+            ..a
+        });
+        bad(|a| AiConfig {
+            timeout_secs: 0,
+            ..a
+        });
+        bad(|a| AiConfig {
+            temperature: 5.0,
+            ..a
+        });
+        bad(|a| AiConfig {
+            max_context_tokens: 10,
+            ..a
+        });
     }
 
     #[test]
