@@ -75,6 +75,10 @@ pub struct AiAnswer {
     pub terms: Vec<String>,
     /// True when retrieval found nothing and no model call was made.
     pub no_results: bool,
+    /// The model was asked and said it could not answer from the excerpts.
+    /// Not the same as an ungrounded answer — this is the honest outcome, and
+    /// flagging it as unverified would train people to ignore that warning.
+    pub declined: bool,
     pub estimated_prompt_tokens: u32,
     pub latency_ms: u64,
 }
@@ -128,6 +132,7 @@ impl AiSearchService {
                 oversized: false,
                 terms: terms.terms,
                 no_results: true,
+                declined: true,
                 estimated_prompt_tokens: 0,
                 latency_ms: started.elapsed().as_millis() as u64,
             };
@@ -181,9 +186,14 @@ impl AiSearchService {
         let response = match response {
             Ok(response) => response,
             Err(err) => {
-                sink(AiDelta::Failed {
-                    error: (&err).into(),
-                });
+                // A cancellation is the user's own doing, not a failure to
+                // report back at them. The panel already knows it stopped, and
+                // keeps whatever text had arrived.
+                if !matches!(err, AiError::Cancelled) {
+                    sink(AiDelta::Failed {
+                        error: (&err).into(),
+                    });
+                }
                 return Err(err);
             }
         };
@@ -211,7 +221,10 @@ impl AiSearchService {
             "answer complete"
         );
 
+        let declined = grounding.uncited && looks_like_a_refusal(&response.content);
+
         let answer = AiAnswer {
+            declined,
             text: response.content,
             model: response.model,
             usage: response.usage,
@@ -327,6 +340,37 @@ impl AiSearchService {
     }
 }
 
+/// Whether an answer is the model declining, rather than an ungrounded claim.
+///
+/// A refusal cites nothing because there was nothing to cite, which is correct.
+/// The prompt asks for a specific form of words, so this looks for it; anything
+/// it does not recognise still gets the unverified header, which is the safe
+/// direction to be wrong in.
+fn looks_like_a_refusal(answer: &str) -> bool {
+    const MAX_REFUSAL_CHARS: usize = 400;
+
+    let text = answer.trim().to_lowercase();
+    if text.is_empty() || text.chars().count() > MAX_REFUSAL_CHARS {
+        return false;
+    }
+
+    [
+        "could not find",
+        "couldn't find",
+        "cannot find",
+        "can't find",
+        "do not contain",
+        "don't contain",
+        "does not contain",
+        "doesn't contain",
+        "no information",
+        "not in your notes",
+        "nothing in your notes",
+    ]
+    .iter()
+    .any(|phrase| text.contains(phrase))
+}
+
 /// Whether the failure looks like "this endpoint does not do streaming".
 ///
 /// A 400 is what an OpenAI-compatible service returns when it cannot honour
@@ -384,6 +428,45 @@ mod tests {
         let filled = SYSTEM_PROMPT.replace(EXCERPT_PLACEHOLDER, "=== EXCERPT 1 ===\nbody");
         assert!(!filled.contains(EXCERPT_PLACEHOLDER));
         assert!(filled.contains("=== EXCERPT 1 ==="));
+    }
+
+    #[test]
+    fn a_refusal_is_recognised_so_it_is_not_flagged_as_unverified() {
+        for answer in [
+            "I could not find this in your notes.",
+            "I could not find this information in your notes.",
+            "Your notes do not contain anything about that.",
+            "There is nothing in your notes about the cost.",
+            "I cannot find an answer to that in the excerpts provided.",
+        ] {
+            assert!(looks_like_a_refusal(answer), "not recognised: {answer}");
+        }
+    }
+
+    #[test]
+    fn a_substantive_answer_is_not_mistaken_for_a_refusal() {
+        for answer in [
+            "The orchestrator stops the node pool while work remains.",
+            "Capacity planning assumes no GPU failure during the drain window.",
+            "",
+        ] {
+            assert!(
+                !looks_like_a_refusal(answer),
+                "wrongly treated as a refusal: {answer}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_long_answer_that_merely_mentions_not_finding_something_is_not_a_refusal() {
+        // A real answer that happens to say "could not find" part-way through
+        // still made claims, and those claims still need the header.
+        let long = format!(
+            "The drain window is scheduled nightly and the pool is resized then.              I could not find the exact times. {}",
+            "The remaining detail is in the capacity note. ".repeat(12)
+        );
+        assert!(long.chars().count() > 400, "precondition");
+        assert!(!looks_like_a_refusal(&long));
     }
 
     #[test]

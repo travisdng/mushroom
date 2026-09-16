@@ -10,7 +10,17 @@ use serde::Serialize;
 
 use crate::ai::provider::Provider;
 
+/// The Credential Manager service name.
+///
+/// Deliberately different under `cfg(test)`. The tests at the bottom of this
+/// file store and clear keys for real, against the real credential store — and
+/// with a shared name they destroyed the key of whoever ran them. `cargo test`
+/// on a machine with Mushroom configured wiped the stored API key, silently,
+/// and the next question came back "the API key was rejected".
+#[cfg(not(test))]
 const SERVICE: &str = "Mushroom";
+#[cfg(test)]
+const SERVICE: &str = "Mushroom (test suite)";
 
 fn account(provider: Provider) -> String {
     // Keyed per provider so switching between LiteLLM and OpenAI does not
@@ -175,6 +185,16 @@ mod tests {
         assert_eq!(get(Provider::OpenAi).as_deref(), Some("openai-key"));
 
         clear(Provider::OpenAi);
+    }
+
+    #[test]
+    fn the_tests_never_touch_the_real_credential_entry() {
+        // Removing the cfg(test) service name would make this suite delete the
+        // keys of anyone who runs it.
+        assert_ne!(
+            SERVICE, "Mushroom",
+            "the tests must not share a credential service name with the app"
+        );
     }
 
     #[test]

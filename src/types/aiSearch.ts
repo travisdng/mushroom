@@ -53,6 +53,8 @@ export type AiAnswer = {
   oversized: boolean;
   terms: string[];
   noResults: boolean;
+  /** The model was asked and said it could not answer from the excerpts. */
+  declined: boolean;
   estimatedPromptTokens: number;
   latencyMs: number;
 };

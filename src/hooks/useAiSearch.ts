@@ -112,6 +112,10 @@ export function useAiSearch(): AiSearchApi {
             setStage("done");
             break;
           case "failed":
+            // Belt and braces: the backend does not send this for a
+            // cancellation, and if it ever did it would still not be an error
+            // the user needs telling about.
+            if (stopped.current) break;
             setError(delta.error);
             setStage("error");
             break;

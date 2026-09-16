@@ -37,7 +37,7 @@ export function AnswerView({
 
   return (
     <div className="answer">
-      {grounding?.uncited && !answer?.noResults ? (
+      {grounding?.uncited && !answer?.noResults && !answer?.declined ? (
         <div className="answer__header">
           Unverified — the model did not cite any of your notes.
         </div>

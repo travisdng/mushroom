@@ -567,3 +567,46 @@ async fn streaming_can_be_turned_off_in_config() {
 fn kinds_of(captured: &Captured) -> Vec<String> {
     captured.kinds()
 }
+
+#[tokio::test]
+async fn stopping_is_not_reported_as_a_failure() {
+    // Pressing Stop is the user getting what they asked for. A Failed delta
+    // renders as an error strip, which reads as telling them off.
+    let (_dir, root, db) = corpus();
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(std::time::Duration::from_secs(30))
+                .set_body_string(sse_answer("never arrives")),
+        )
+        .mount(&server)
+        .await;
+
+    let service = AiSearchService::new(indexed(&root, &db), ai_for(&server));
+    let captured = Captured::new();
+    let cancel = CancellationToken::new();
+
+    let token = cancel.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        token.cancel();
+    });
+
+    let outcome = service
+        .answer("GPU failure", None, captured.sink(), cancel)
+        .await;
+
+    assert!(outcome.is_err(), "the call still reports it did not finish");
+    assert!(
+        !captured.kinds().contains(&"failed".to_string()),
+        "a cancellation must not arrive as a failure: {:?}",
+        captured.kinds()
+    );
+    // The notes it found are still worth showing.
+    assert_eq!(
+        captured.kinds().first().map(String::as_str),
+        Some("retrieved")
+    );
+}
