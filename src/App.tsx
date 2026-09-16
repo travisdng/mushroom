@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import MainWindow from "./pages/MainWindow";
 import Gallery from "./pages/Gallery";
 import { ShellProvider } from "./hooks/useShell";
+import { NotesProvider } from "./hooks/useNotes";
 
 /** `#gallery` renders the temporary control gallery from task 11. */
 export default function App() {
@@ -17,7 +18,9 @@ export default function App() {
 
   return (
     <ShellProvider>
-      <MainWindow />
+      <NotesProvider>
+        <MainWindow />
+      </NotesProvider>
     </ShellProvider>
   );
 }

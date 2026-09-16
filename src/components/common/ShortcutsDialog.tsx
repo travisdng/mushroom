@@ -9,9 +9,11 @@ const SHORTCUTS: Array<{ combo: string; action: string; works: boolean }> = [
   { combo: "Ctrl+Shift+F", action: "Toggle the AI panel", works: true },
   { combo: "F1", action: "This dialog", works: true },
   { combo: "Escape", action: "Close menu or dialog", works: true },
-  { combo: "Ctrl+N", action: "New note", works: false },
+  { combo: "Ctrl+N", action: "New note", works: true },
+  { combo: "Ctrl+S", action: "Save", works: true },
+  { combo: "Ctrl+Shift+P", action: "Toggle preview", works: true },
+  { combo: "F5", action: "Refresh notes", works: true },
   { combo: "Ctrl+O", action: "Open", works: false },
-  { combo: "Ctrl+S", action: "Save", works: false },
   { combo: "Ctrl+F", action: "Search notes", works: false },
   { combo: "Ctrl+P", action: "Quick open", works: false },
 ];

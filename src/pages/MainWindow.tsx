@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MenuBar } from "../components/chrome/MenuBar";
 import type { MenuDef } from "../components/chrome/MenuBar";
 import { Toolbar } from "../components/chrome/Toolbar";
@@ -9,7 +9,19 @@ import { Splitter } from "../components/common/Splitter";
 import { EmptyState } from "../components/common/EmptyState";
 import { AboutDialog } from "../components/common/AboutDialog";
 import { ShortcutsDialog } from "../components/common/ShortcutsDialog";
+import { FolderTree } from "../components/notebook/FolderTree";
+import { NoteList } from "../components/notebook/NoteList";
+import {
+  ConfirmDeleteDialog,
+  ConflictDialog,
+  MoveDialog,
+  NoteErrorDialog,
+  PromptDialog,
+} from "../components/notebook/NoteDialogs";
+import { EditorPane } from "../components/editor/EditorPane";
+import type { ViewMode } from "../components/editor/EditorPane";
 import { useShell, NOT_AVAILABLE } from "../hooks/useShell";
+import { useNotes } from "../hooks/useNotes";
 import { useShortcuts } from "../hooks/useShortcuts";
 
 const SIDEBAR_MIN = 160;
@@ -17,32 +29,82 @@ const EDITOR_MIN = 320;
 const AI_MIN = 240;
 const NOTEBOOK_MIN = 80;
 
-type DialogKind = "about" | "shortcuts" | null;
+type DialogKind =
+  | { kind: "about" }
+  | { kind: "shortcuts" }
+  | { kind: "new-note"; folder: string }
+  | { kind: "new-folder"; parent: string }
+  | { kind: "rename"; id: string; title: string }
+  | { kind: "move"; id: string; title: string }
+  | { kind: "delete-note"; id: string; title: string }
+  | null;
 
 export default function MainWindow() {
   const shell = useShell();
+  const notes = useNotes();
   const [dialog, setDialog] = useState<DialogKind>(null);
+  const [mode, setMode] = useState<ViewMode>("edit");
   const { sidebarWidth, notebookHeight, aiWidth } = shell.ui;
   const workAreaRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Depend on setStatus rather than the whole shell: setStatus is stable, so
-  // this callback is too, and the keydown listener is not re-registered every
-  // time the status text or a panel size changes.
+  // Depend on the stable setters rather than the whole shell object, so the
+  // keydown listener is not re-registered on every status change.
   const setStatus = shell.setStatus;
+  const setContext = shell.setContext;
   const togglePanel = shell.togglePanel;
 
   const notAvailable = useCallback(() => {
     setStatus(NOT_AVAILABLE, 2000);
   }, [setStatus]);
 
+  useEffect(() => {
+    const count = notes.notes.length;
+    setContext(`${count} ${count === 1 ? "note" : "notes"}`);
+  }, [notes.notes.length, setContext]);
+
+  useEffect(() => {
+    if (notes.saving) setStatus("Saving…");
+    else if (notes.dirty) setStatus("Modified");
+    else if (notes.lastSavedAt) {
+      setStatus(`Saved ${new Date(notes.lastSavedAt).toLocaleTimeString()}`);
+    }
+  }, [notes.saving, notes.dirty, notes.lastSavedAt, setStatus]);
+
+  // The dirty marker belongs in the window title, as it did (R4.3).
+  useEffect(() => {
+    const title = notes.open
+      ? `${notes.dirty ? "*" : ""}${notes.open.meta.title} — Mushroom`
+      : "Mushroom — Personal Knowledge";
+    document.title = title;
+    void (async () => {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().setTitle(title);
+      } catch {
+        // Browser preview: there is no native window to title.
+      }
+    })();
+  }, [notes.open, notes.dirty]);
+
+  const newNote = useCallback(() => {
+    setDialog({ kind: "new-note", folder: notes.selectedFolder ?? "" });
+  }, [notes.selectedFolder]);
+
+  const save = notes.save;
+  const refresh = notes.refresh;
+
   const shortcutHandlers = useMemo(
     () => ({
+      "Ctrl+N": newNote,
+      "Ctrl+S": () => void save(),
       "Ctrl+Shift+F": () => togglePanel("ai"),
-      F1: () => setDialog("shortcuts"),
+      "Ctrl+Shift+P": () => setMode((m) => (m === "preview" ? "edit" : "preview")),
+      F1: () => setDialog({ kind: "shortcuts" }),
+      F5: () => void refresh(),
       Escape: () => setDialog(null),
     }),
-    [togglePanel],
+    [newNote, save, refresh, togglePanel],
   );
 
   useShortcuts(notAvailable, shortcutHandlers);
@@ -52,10 +114,9 @@ export default function MainWindow() {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
       await getCurrentWindow().close();
     } catch {
-      // Running in a plain browser (npm run dev) — there is no window to close.
-      shell.setStatus("Exit is only available in the desktop app", 2500);
+      setStatus("Exit is only available in the desktop app", 2500);
     }
-  }, [shell]);
+  }, [setStatus]);
 
   const dragSidebar = useCallback(
     (delta: number) => {
@@ -74,10 +135,7 @@ export default function MainWindow() {
       const total = sidebarRef.current?.clientHeight ?? 0;
       const max = Math.max(NOTEBOOK_MIN, total - NOTEBOOK_MIN);
       shell.setSizes({
-        notebookHeight: Math.max(
-          NOTEBOOK_MIN,
-          Math.min(notebookHeight + delta, max),
-        ),
+        notebookHeight: Math.max(NOTEBOOK_MIN, Math.min(notebookHeight + delta, max)),
       });
     },
     [notebookHeight, shell],
@@ -87,21 +145,28 @@ export default function MainWindow() {
     (delta: number) => {
       const total = workAreaRef.current?.clientWidth ?? 0;
       const max = Math.max(AI_MIN, total - EDITOR_MIN - sidebarWidth);
-      shell.setSizes({
-        aiWidth: Math.max(AI_MIN, Math.min(aiWidth - delta, max)),
-      });
+      shell.setSizes({ aiWidth: Math.max(AI_MIN, Math.min(aiWidth - delta, max)) });
     },
     [aiWidth, sidebarWidth, shell],
   );
+
+  const openId = notes.open?.meta.id;
+  const openTitle = notes.open?.meta.title ?? "";
 
   const menus: MenuDef[] = [
     {
       title: "File",
       mnemonic: "F",
       items: [
-        { type: "item", label: "New Note", mnemonic: "N", accel: "Ctrl+N" },
+        { type: "item", label: "New Note", mnemonic: "N", accel: "Ctrl+N", onSelect: newNote },
         { type: "item", label: "Open…", mnemonic: "O", accel: "Ctrl+O" },
-        { type: "item", label: "Save", mnemonic: "S", accel: "Ctrl+S" },
+        {
+          type: "item",
+          label: "Save",
+          mnemonic: "S",
+          accel: "Ctrl+S",
+          onSelect: notes.dirty ? () => void save() : undefined,
+        },
         { type: "item", label: "Save As…", mnemonic: "A" },
         { type: "separator" },
         { type: "item", label: "Import…", mnemonic: "I" },
@@ -114,49 +179,29 @@ export default function MainWindow() {
       title: "Edit",
       mnemonic: "E",
       items: [
-        { type: "item", label: "Undo", mnemonic: "U", accel: "Ctrl+Z" },
-        { type: "item", label: "Redo", mnemonic: "R", accel: "Ctrl+Y" },
+        { type: "item", label: "Undo", mnemonic: "U", accel: "Ctrl+Z", onSelect: () => document.execCommand("undo") },
+        { type: "item", label: "Redo", mnemonic: "R", accel: "Ctrl+Y", onSelect: () => document.execCommand("redo") },
         { type: "separator" },
-        { type: "item", label: "Cut", mnemonic: "t", accel: "Ctrl+X" },
-        { type: "item", label: "Copy", mnemonic: "C", accel: "Ctrl+C" },
-        { type: "item", label: "Paste", mnemonic: "P", accel: "Ctrl+V" },
+        { type: "item", label: "Cut", mnemonic: "t", accel: "Ctrl+X", onSelect: () => document.execCommand("cut") },
+        { type: "item", label: "Copy", mnemonic: "C", accel: "Ctrl+C", onSelect: () => document.execCommand("copy") },
+        { type: "item", label: "Paste", mnemonic: "P", accel: "Ctrl+V", onSelect: () => document.execCommand("paste") },
         { type: "separator" },
-        { type: "item", label: "Select All", mnemonic: "A", accel: "Ctrl+A" },
+        { type: "item", label: "Select All", mnemonic: "A", accel: "Ctrl+A", onSelect: () => document.execCommand("selectAll") },
       ],
     },
     {
       title: "View",
       mnemonic: "V",
       items: [
-        {
-          type: "item",
-          label: "Notes",
-          mnemonic: "N",
-          checked: shell.ui.showNotesPanel,
-          onSelect: () => shell.togglePanel("notes"),
-        },
-        {
-          type: "item",
-          label: "Search",
-          mnemonic: "S",
-          checked: shell.ui.showSearchPanel,
-          onSelect: () => shell.togglePanel("search"),
-        },
-        {
-          type: "item",
-          label: "AI Search",
-          mnemonic: "A",
-          checked: shell.ui.showAiPanel,
-          onSelect: () => shell.togglePanel("ai"),
-        },
+        { type: "item", label: "Edit", mnemonic: "E", checked: mode === "edit", onSelect: () => setMode("edit") },
+        { type: "item", label: "Preview", mnemonic: "P", accel: "Ctrl+Shift+P", checked: mode === "preview", onSelect: () => setMode("preview") },
+        { type: "item", label: "Split", mnemonic: "S", checked: mode === "split", onSelect: () => setMode("split") },
         { type: "separator" },
-        {
-          type: "item",
-          label: "Status Bar",
-          mnemonic: "B",
-          checked: shell.ui.showStatusBar,
-          onSelect: shell.toggleStatusBar,
-        },
+        { type: "item", label: "Notes", mnemonic: "N", checked: shell.ui.showNotesPanel, onSelect: () => togglePanel("notes") },
+        { type: "item", label: "AI Search", mnemonic: "A", checked: shell.ui.showAiPanel, onSelect: () => togglePanel("ai") },
+        { type: "separator" },
+        { type: "item", label: "Refresh", mnemonic: "R", accel: "F5", onSelect: () => void refresh() },
+        { type: "item", label: "Status Bar", mnemonic: "B", checked: shell.ui.showStatusBar, onSelect: shell.toggleStatusBar },
       ],
     },
     {
@@ -165,24 +210,40 @@ export default function MainWindow() {
       items: [
         { type: "item", label: "Search Notes", mnemonic: "S", accel: "Ctrl+F" },
         { type: "item", label: "Search Everywhere", mnemonic: "E" },
-        {
-          type: "item",
-          label: "AI Search",
-          mnemonic: "A",
-          accel: "Ctrl+Shift+F",
-          onSelect: () => shell.togglePanel("ai"),
-        },
+        { type: "item", label: "AI Search", mnemonic: "A", accel: "Ctrl+Shift+F", onSelect: () => togglePanel("ai") },
       ],
     },
     {
       title: "Note",
       mnemonic: "N",
       items: [
-        { type: "item", label: "New Note", mnemonic: "N" },
-        { type: "item", label: "Rename", mnemonic: "R" },
-        { type: "item", label: "Move", mnemonic: "M" },
+        { type: "item", label: "New Note", mnemonic: "N", onSelect: newNote },
+        {
+          type: "item",
+          label: "Rename…",
+          mnemonic: "R",
+          onSelect: openId ? () => setDialog({ kind: "rename", id: openId, title: openTitle }) : undefined,
+        },
+        {
+          type: "item",
+          label: "Move…",
+          mnemonic: "M",
+          onSelect: openId ? () => setDialog({ kind: "move", id: openId, title: openTitle }) : undefined,
+        },
         { type: "separator" },
-        { type: "item", label: "Delete", mnemonic: "D" },
+        {
+          type: "item",
+          label: "Delete…",
+          mnemonic: "D",
+          onSelect: openId ? () => setDialog({ kind: "delete-note", id: openId, title: openTitle }) : undefined,
+        },
+        { type: "separator" },
+        {
+          type: "item",
+          label: "New Folder…",
+          mnemonic: "F",
+          onSelect: () => setDialog({ kind: "new-folder", parent: notes.selectedFolder ?? "" }),
+        },
       ],
     },
     {
@@ -199,36 +260,27 @@ export default function MainWindow() {
       title: "Help",
       mnemonic: "H",
       items: [
-        {
-          type: "item",
-          label: "Keyboard Shortcuts",
-          mnemonic: "K",
-          accel: "F1",
-          onSelect: () => setDialog("shortcuts"),
-        },
+        { type: "item", label: "Keyboard Shortcuts", mnemonic: "K", accel: "F1", onSelect: () => setDialog({ kind: "shortcuts" }) },
         { type: "separator" },
-        {
-          type: "item",
-          label: "About Mushroom",
-          mnemonic: "A",
-          onSelect: () => setDialog("about"),
-        },
+        { type: "item", label: "About Mushroom", mnemonic: "A", onSelect: () => setDialog({ kind: "about" }) },
       ],
     },
   ];
 
   const toolbarActions: ToolbarAction[] = [
-    { label: "New", icon: "new" },
+    { label: "New", icon: "new", onClick: newNote },
     { label: "Open", icon: "open" },
-    { label: "Save", icon: "save" },
+    { label: "Save", icon: "save", onClick: () => void save(), disabled: !notes.dirty },
     { label: "Search", icon: "search", separatorBefore: true },
     {
       label: "AI",
       icon: "ai",
       pressed: shell.ui.showAiPanel,
-      onClick: () => shell.togglePanel("ai"),
+      onClick: () => togglePanel("ai"),
     },
   ];
+
+  const rootUnavailable = notes.status != null && !notes.status.available;
 
   return (
     <div className="app">
@@ -238,39 +290,31 @@ export default function MainWindow() {
       <div className="workarea" ref={workAreaRef}>
         <div className="sidebar" ref={sidebarRef} style={{ width: sidebarWidth }}>
           <Panel title="Notebook" style={{ height: notebookHeight, flex: "none" }}>
-            <EmptyState text="No notebooks yet." />
+            {rootUnavailable ? (
+              <EmptyState text="Your notes folder is not available." />
+            ) : (
+              <FolderTree />
+            )}
           </Panel>
 
-          <Splitter
-            orientation="horizontal"
-            onDrag={dragNotebook}
-            label="Resize notebook pane"
-          />
+          <Splitter orientation="horizontal" onDrag={dragNotebook} label="Resize notebook pane" />
 
           {shell.ui.showNotesPanel ? (
             <Panel title="Notes" style={{ flex: "1 1 auto", minHeight: 0 }}>
-              <EmptyState text="No notes yet." />
+              <NoteList onCreate={newNote} />
             </Panel>
           ) : null}
         </div>
 
-        <Splitter
-          orientation="vertical"
-          onDrag={dragSidebar}
-          label="Resize sidebar"
-        />
+        <Splitter orientation="vertical" onDrag={dragSidebar} label="Resize sidebar" />
 
         <div className="editor-pane">
-          <EmptyState text="No note open." />
+          <EditorPane mode={mode} onCreate={newNote} />
         </div>
 
         {shell.ui.showAiPanel ? (
           <>
-            <Splitter
-              orientation="vertical"
-              onDrag={dragAi}
-              label="Resize AI panel"
-            />
+            <Splitter orientation="vertical" onDrag={dragAi} label="Resize AI panel" />
             <div className="ai-pane" style={{ width: aiWidth }}>
               <Panel title="AI Search" flat>
                 <EmptyState text="AI search arrives in a later release." />
@@ -282,12 +326,59 @@ export default function MainWindow() {
 
       <StatusBar />
 
-      {dialog === "about" ? (
-        <AboutDialog onClose={() => setDialog(null)} />
+      {dialog?.kind === "about" ? <AboutDialog onClose={() => setDialog(null)} /> : null}
+      {dialog?.kind === "shortcuts" ? <ShortcutsDialog onClose={() => setDialog(null)} /> : null}
+
+      {dialog?.kind === "new-note" ? (
+        <PromptDialog
+          title="New Note"
+          label="Title"
+          initial="Untitled"
+          acceptLabel="Create"
+          onAccept={(title) => void notes.createNote(dialog.folder, title)}
+          onClose={() => setDialog(null)}
+        />
       ) : null}
-      {dialog === "shortcuts" ? (
-        <ShortcutsDialog onClose={() => setDialog(null)} />
+
+      {dialog?.kind === "new-folder" ? (
+        <PromptDialog
+          title="New Folder"
+          label="Name"
+          acceptLabel="Create"
+          onAccept={(name) => void notes.createFolder(dialog.parent, name)}
+          onClose={() => setDialog(null)}
+        />
       ) : null}
+
+      {dialog?.kind === "rename" ? (
+        <PromptDialog
+          title="Rename Note"
+          label="Title"
+          initial={dialog.title}
+          acceptLabel="Rename"
+          onAccept={(title) => void notes.renameNote(dialog.id, title)}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+
+      {dialog?.kind === "move" ? (
+        <MoveDialog
+          noteTitle={dialog.title}
+          onMove={(folder) => void notes.moveNote(dialog.id, folder)}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+
+      {dialog?.kind === "delete-note" ? (
+        <ConfirmDeleteDialog
+          what={dialog.title}
+          onConfirm={() => void notes.deleteNote(dialog.id)}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+
+      <ConflictDialog />
+      <NoteErrorDialog />
     </div>
   );
 }
