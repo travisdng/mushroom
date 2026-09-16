@@ -12,7 +12,7 @@ dated version section and write the matching file in
 
 Nothing yet — v0.1.0 is the current tip.
 
-## [0.1.0] — pending installer verification
+## [0.1.0] — 2026-09-16
 
 Milestone 01 — the application shell. See
 [notes/v0.1.0.md](notes/v0.1.0.md).
@@ -50,6 +50,8 @@ Milestone 01 — the application shell. See
 - No notes, search, or AI — milestones 02 through 05.
 - The installer is unsigned; SmartScreen warns that the publisher is unknown.
 - Windows only.
+- Not tested on a separate Windows profile, or on a machine without the
+  WebView2 runtime already installed.
 
 ---
 
