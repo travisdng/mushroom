@@ -1,0 +1,175 @@
+/** Search panel: query field, scope, result rows with marked snippets. */
+
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.search-controls {
+  flex: none;
+  padding: 4px;
+  position: relative;
+}
+
+.search-input-row {
+  display: flex;
+  gap: 2px;
+}
+
+.search-history-button {
+  flex: none;
+  min-width: 18px;
+  width: 18px;
+  padding: 0;
+  height: 21px;
+  font-size: 9px;
+}
+
+/* Classic drop-down of recent queries, over the results. */
+.search-history {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 27px;
+  z-index: 50;
+  max-height: 160px;
+  overflow: auto;
+  background: var(--field-bg);
+  border-top: 1px solid var(--bevel-light);
+  border-left: 1px solid var(--bevel-light);
+  border-right: 1px solid var(--bevel-dark);
+  border-bottom: 1px solid var(--bevel-dark);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-face);
+}
+
+.search-scope {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.search-scope > label {
+  flex: none;
+}
+
+.search-scope > select {
+  flex: 1 1 auto;
+  height: 21px;
+}
+
+.search-notice {
+  flex: none;
+  margin: 0 4px 4px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-alt);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+.search-count {
+  flex: none;
+  padding: 2px 6px;
+  font-weight: bold;
+  border-bottom: 1px solid var(--bevel-shadow);
+  box-shadow: 0 1px 0 var(--bevel-light);
+  min-height: 18px;
+}
+
+.search-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  margin: 2px;
+  background: var(--field-bg);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+.search-hit {
+  padding: 3px 5px;
+  border-bottom: 1px solid var(--surface-alt);
+  cursor: default;
+}
+
+.search-hit[data-selected="true"] {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.search-hit:focus-visible {
+  outline: 1px dotted var(--text);
+  outline-offset: -2px;
+}
+
+.search-hit-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.search-hit-title {
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-hit-date,
+.search-hit-meta {
+  color: var(--text-disabled);
+  white-space: nowrap;
+}
+
+.search-hit[data-selected="true"] .search-hit-date,
+.search-hit[data-selected="true"] .search-hit-meta {
+  color: var(--selection-text);
+}
+
+.search-hit-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-hit-snippet {
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+/* Matched terms: inverse video, not a yellow highlighter. */
+.search-hit .hit {
+  background: var(--text);
+  color: var(--field-bg);
+  font-weight: bold;
+}
+
+.search-hit[data-selected="true"] .hit {
+  background: var(--selection-text);
+  color: var(--selection-bg);
+}
+
+.search-empty {
+  padding: 8px 6px;
+  color: var(--text-disabled);
+}
+
+.search-empty-terms {
+  margin-top: 4px;
+}
+
+/* Briefly mark the line a search result landed on. */
+@keyframes mushroom-flash {
+  from { background: var(--selection-bg); }
+  to { background: transparent; }
+}

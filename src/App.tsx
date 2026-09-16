@@ -3,6 +3,7 @@ import MainWindow from "./pages/MainWindow";
 import Gallery from "./pages/Gallery";
 import { ShellProvider } from "./hooks/useShell";
 import { NotesProvider } from "./hooks/useNotes";
+import { SearchProvider } from "./hooks/useSearch";
 
 /** `#gallery` renders the temporary control gallery from task 11. */
 export default function App() {
@@ -19,7 +20,9 @@ export default function App() {
   return (
     <ShellProvider>
       <NotesProvider>
-        <MainWindow />
+        <SearchProvider>
+          <MainWindow />
+        </SearchProvider>
       </NotesProvider>
     </ShellProvider>
   );

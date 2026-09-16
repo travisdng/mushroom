@@ -19,9 +19,12 @@ import {
   PromptDialog,
 } from "../components/notebook/NoteDialogs";
 import { EditorPane } from "../components/editor/EditorPane";
+import { SearchPanel } from "../components/search/SearchPanel";
+import { RebuildDialog } from "../components/search/RebuildDialog";
 import type { ViewMode } from "../components/editor/EditorPane";
 import { useShell, NOT_AVAILABLE } from "../hooks/useShell";
 import { useNotes } from "../hooks/useNotes";
+import { useSearch } from "../hooks/useSearch";
 import { useShortcuts } from "../hooks/useShortcuts";
 
 const SIDEBAR_MIN = 160;
@@ -37,11 +40,13 @@ type DialogKind =
   | { kind: "rename"; id: string; title: string }
   | { kind: "move"; id: string; title: string }
   | { kind: "delete-note"; id: string; title: string }
+  | { kind: "rebuild" }
   | null;
 
 export default function MainWindow() {
   const shell = useShell();
   const notes = useNotes();
+  const search = useSearch();
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [mode, setMode] = useState<ViewMode>("edit");
   const { sidebarWidth, notebookHeight, aiWidth } = shell.ui;
@@ -64,12 +69,23 @@ export default function MainWindow() {
   }, [notes.notes.length, setContext]);
 
   useEffect(() => {
-    if (notes.saving) setStatus("Saving…");
+    if (search.progress) {
+      const { done, total } = search.progress;
+      setStatus(total > 0 ? `Indexing ${done} / ${total}…` : "Indexing…");
+    } else if (notes.saving) setStatus("Saving…");
     else if (notes.dirty) setStatus("Modified");
+    else if (search.stats?.stale) setStatus("Index out of date");
     else if (notes.lastSavedAt) {
       setStatus(`Saved ${new Date(notes.lastSavedAt).toLocaleTimeString()}`);
     }
-  }, [notes.saving, notes.dirty, notes.lastSavedAt, setStatus]);
+  }, [
+    notes.saving,
+    notes.dirty,
+    notes.lastSavedAt,
+    search.progress,
+    search.stats?.stale,
+    setStatus,
+  ]);
 
   // The dirty marker belongs in the window title, as it did (R4.3).
   useEffect(() => {
@@ -94,17 +110,22 @@ export default function MainWindow() {
   const save = notes.save;
   const refresh = notes.refresh;
 
+  const showSearch = useCallback(() => {
+    if (!shell.ui.showSearchPanel) togglePanel("search");
+  }, [shell.ui.showSearchPanel, togglePanel]);
+
   const shortcutHandlers = useMemo(
     () => ({
       "Ctrl+N": newNote,
       "Ctrl+S": () => void save(),
+      "Ctrl+F": () => showSearch(),
       "Ctrl+Shift+F": () => togglePanel("ai"),
       "Ctrl+Shift+P": () => setMode((m) => (m === "preview" ? "edit" : "preview")),
       F1: () => setDialog({ kind: "shortcuts" }),
       F5: () => void refresh(),
       Escape: () => setDialog(null),
     }),
-    [newNote, save, refresh, togglePanel],
+    [newNote, save, refresh, togglePanel, showSearch],
   );
 
   useShortcuts(notAvailable, shortcutHandlers);
@@ -198,6 +219,7 @@ export default function MainWindow() {
         { type: "item", label: "Split", mnemonic: "S", checked: mode === "split", onSelect: () => setMode("split") },
         { type: "separator" },
         { type: "item", label: "Notes", mnemonic: "N", checked: shell.ui.showNotesPanel, onSelect: () => togglePanel("notes") },
+        { type: "item", label: "Search", mnemonic: "h", checked: shell.ui.showSearchPanel, onSelect: () => togglePanel("search") },
         { type: "item", label: "AI Search", mnemonic: "A", checked: shell.ui.showAiPanel, onSelect: () => togglePanel("ai") },
         { type: "separator" },
         { type: "item", label: "Refresh", mnemonic: "R", accel: "F5", onSelect: () => void refresh() },
@@ -208,7 +230,13 @@ export default function MainWindow() {
       title: "Search",
       mnemonic: "S",
       items: [
-        { type: "item", label: "Search Notes", mnemonic: "S", accel: "Ctrl+F" },
+        {
+          type: "item",
+          label: "Search Notes",
+          mnemonic: "S",
+          accel: "Ctrl+F",
+          onSelect: showSearch,
+        },
         { type: "item", label: "Search Everywhere", mnemonic: "E" },
         { type: "item", label: "AI Search", mnemonic: "A", accel: "Ctrl+Shift+F", onSelect: () => togglePanel("ai") },
       ],
@@ -250,7 +278,12 @@ export default function MainWindow() {
       title: "Tools",
       mnemonic: "T",
       items: [
-        { type: "item", label: "Rebuild Index", mnemonic: "R" },
+        {
+          type: "item",
+          label: "Rebuild Index…",
+          mnemonic: "R",
+          onSelect: () => setDialog({ kind: "rebuild" }),
+        },
         { type: "separator" },
         { type: "item", label: "Settings", mnemonic: "S" },
         { type: "item", label: "Diagnostics", mnemonic: "D" },
@@ -271,7 +304,13 @@ export default function MainWindow() {
     { label: "New", icon: "new", onClick: newNote },
     { label: "Open", icon: "open" },
     { label: "Save", icon: "save", onClick: () => void save(), disabled: !notes.dirty },
-    { label: "Search", icon: "search", separatorBefore: true },
+    {
+      label: "Search",
+      icon: "search",
+      separatorBefore: true,
+      pressed: shell.ui.showSearchPanel,
+      onClick: showSearch,
+    },
     {
       label: "AI",
       icon: "ai",
@@ -299,7 +338,11 @@ export default function MainWindow() {
 
           <Splitter orientation="horizontal" onDrag={dragNotebook} label="Resize notebook pane" />
 
-          {shell.ui.showNotesPanel ? (
+          {shell.ui.showSearchPanel ? (
+            <Panel title="Search" flat style={{ flex: "1 1 auto", minHeight: 0 }}>
+              <SearchPanel />
+            </Panel>
+          ) : shell.ui.showNotesPanel ? (
             <Panel title="Notes" style={{ flex: "1 1 auto", minHeight: 0 }}>
               <NoteList onCreate={newNote} />
             </Panel>
@@ -373,6 +416,13 @@ export default function MainWindow() {
         <ConfirmDeleteDialog
           what={dialog.title}
           onConfirm={() => void notes.deleteNote(dialog.id)}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+
+      {dialog?.kind === "rebuild" ? (
+        <RebuildDialog
+          onConfirm={() => void search.rebuild()}
           onClose={() => setDialog(null)}
         />
       ) : null}
