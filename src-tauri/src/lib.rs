@@ -103,6 +103,10 @@ pub fn run() {
             commands::notes::export_notes,
             commands::notes::get_notes_status,
             commands::notes::refresh_notes,
+            commands::search::search_notes,
+            commands::search::get_index_stats,
+            commands::search::rebuild_index,
+            commands::search::cancel_rebuild,
         ])
         .run(tauri::generate_context!())
         .expect("Mushroom failed to start");
@@ -160,6 +164,52 @@ fn start_notes(app: &tauri::AppHandle, configured: Option<std::path::PathBuf>) {
         Err(err) => {
             tracing::error!(target: "files", error = %err, "notes scan failed");
             let _ = app.emit("notes-unavailable", root.to_string_lossy().to_string());
+            return;
+        }
+    }
+
+    start_search(app, &root);
+}
+
+/// Open the search index and bring it in line with what was just scanned.
+///
+/// Every failure here is survivable: without an index you cannot search, but
+/// notes, editing, and navigation are untouched (R5.3).
+fn start_search(app: &tauri::AppHandle, root: &std::path::Path) {
+    use tauri::Emitter;
+
+    let state = app.state::<AppState>();
+    let index_path = state.data_dir.join("mushroom.db");
+
+    if let Err(err) = state.search.open(&index_path) {
+        tracing::error!(target: "db", error = %err, "search index could not be opened");
+        state.search.mark_stale();
+        let _ = app.emit("index-unavailable", ());
+        return;
+    }
+
+    let on_disk = match state.notes.list(None) {
+        Ok(notes) => notes,
+        Err(err) => {
+            tracing::error!(target: "db", error = %err, "note list unavailable for indexing");
+            return;
+        }
+    };
+
+    match state.search.reconcile(root, &on_disk) {
+        Ok(progress) => {
+            tracing::info!(
+                target: "db",
+                reindexed = progress.done,
+                skipped = progress.skipped,
+                "index ready"
+            );
+            let _ = app.emit("index-ready", progress);
+        }
+        Err(err) => {
+            tracing::error!(target: "db", error = %err, "index reconciliation failed");
+            state.search.mark_stale();
+            let _ = app.emit("index-unavailable", ());
         }
     }
 }

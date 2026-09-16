@@ -98,6 +98,9 @@ pub enum AppError {
     #[error("the search index was written by a newer version of Mushroom")]
     IndexTooNew { found: u32, supported: u32 },
 
+    #[error("the search index is not open")]
+    IndexNotOpen,
+
     #[error("internal error")]
     Internal(String),
 }
@@ -331,6 +334,16 @@ impl From<AppError> for AppErrorDto {
                 ),
                 detail,
                 Some("Use the newer version, or delete the index file to rebuild it."),
+            ),
+
+            AppError::IndexNotOpen => AppErrorDto::new(
+                "INDEX_NOT_OPEN",
+                "Search is not ready yet",
+                "Mushroom has not finished opening its search index. Your notes \
+                 are available; searching will work shortly."
+                    .to_string(),
+                detail,
+                Some("Wait a moment, or use Tools \u{2192} Rebuild Index."),
             ),
 
             AppError::Internal(_) => AppErrorDto::new(

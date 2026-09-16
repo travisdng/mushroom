@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use crate::error::{AppError, AppErrorDto};
 use crate::notes::model::{FolderNode, NoteContent, NoteId, NoteMeta};
 use crate::notes::service::{ImportReport, TrashEntry};
+use crate::search::service::SearchService;
 use crate::state::AppState;
 
 /// Run filesystem work off the async runtime, mapping a join failure to a
@@ -55,7 +56,22 @@ pub async fn save_note(
     expected_modified: Option<i64>,
 ) -> Result<NoteMeta, AppErrorDto> {
     let notes = state.notes.clone();
-    blocking(move || notes.save(&NoteId::new(id), &body, expected_modified)).await
+    let search = state.search.clone();
+    blocking(move || {
+        let meta = notes.save(&NoteId::new(id), &body, expected_modified)?;
+        // Index only after the Markdown write succeeded, and never let an
+        // index failure turn a successful save into an error (R2.7).
+        reindex(&search, &notes, &meta.id);
+        Ok(meta)
+    })
+    .await
+}
+
+/// Update the index for one note, best effort.
+fn reindex(search: &SearchService, notes: &crate::notes::service::NotesService, id: &NoteId) {
+    if let Ok(root) = notes.root() {
+        search.index_note_best_effort(&root, id);
+    }
 }
 
 #[tauri::command]
@@ -65,7 +81,13 @@ pub async fn create_note(
     title: String,
 ) -> Result<NoteMeta, AppErrorDto> {
     let notes = state.notes.clone();
-    blocking(move || notes.create(&folder, &title)).await
+    let search = state.search.clone();
+    blocking(move || {
+        let meta = notes.create(&folder, &title)?;
+        reindex(&search, &notes, &meta.id);
+        Ok(meta)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -75,7 +97,16 @@ pub async fn rename_note(
     new_title: String,
 ) -> Result<NoteMeta, AppErrorDto> {
     let notes = state.notes.clone();
-    blocking(move || notes.rename(&NoteId::new(id), &new_title)).await
+    let search = state.search.clone();
+    blocking(move || {
+        let from = NoteId::new(id);
+        let meta = notes.rename(&from, &new_title)?;
+        if let Ok(root) = notes.root() {
+            search.rename_note_best_effort(&root, &from, &meta.id);
+        }
+        Ok(meta)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -85,7 +116,16 @@ pub async fn move_note(
     new_folder: String,
 ) -> Result<NoteMeta, AppErrorDto> {
     let notes = state.notes.clone();
-    blocking(move || notes.move_note(&NoteId::new(id), &new_folder)).await
+    let search = state.search.clone();
+    blocking(move || {
+        let from = NoteId::new(id);
+        let meta = notes.move_note(&from, &new_folder)?;
+        if let Ok(root) = notes.root() {
+            search.rename_note_best_effort(&root, &from, &meta.id);
+        }
+        Ok(meta)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -94,7 +134,14 @@ pub async fn delete_note(
     id: String,
 ) -> Result<TrashEntry, AppErrorDto> {
     let notes = state.notes.clone();
-    blocking(move || notes.delete(&NoteId::new(id))).await
+    let search = state.search.clone();
+    blocking(move || {
+        let id = NoteId::new(id);
+        let entry = notes.delete(&id)?;
+        search.remove_note_best_effort(&id);
+        Ok(entry)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -113,7 +160,18 @@ pub async fn delete_folder(
     folder: String,
 ) -> Result<usize, AppErrorDto> {
     let notes = state.notes.clone();
-    blocking(move || notes.delete_folder(&folder)).await
+    let search = state.search.clone();
+    blocking(move || {
+        let affected = notes.delete_folder(&folder)?;
+        // Whole-folder changes are easier to reconcile than to track
+        // note-by-note.
+        if let Ok(root) = notes.root() {
+            let remaining = notes.list(None)?;
+            let _ = search.reconcile(&root, &remaining);
+        }
+        Ok(affected)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -123,8 +181,17 @@ pub async fn import_notes(
     target_folder: String,
 ) -> Result<ImportReport, AppErrorDto> {
     let notes = state.notes.clone();
+    let search = state.search.clone();
     let sources: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
-    blocking(move || notes.import(&sources, &target_folder)).await
+    blocking(move || {
+        let report = notes.import(&sources, &target_folder)?;
+        if let Ok(root) = notes.root() {
+            let on_disk = notes.list(None)?;
+            let _ = search.reconcile(&root, &on_disk);
+        }
+        Ok(report)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -163,5 +230,14 @@ pub fn get_notes_status(state: tauri::State<'_, AppState>) -> NotesStatus {
 #[tauri::command]
 pub async fn refresh_notes(state: tauri::State<'_, AppState>) -> Result<usize, AppErrorDto> {
     let notes = state.notes.clone();
-    blocking(move || notes.rescan()).await
+    let search = state.search.clone();
+    blocking(move || {
+        let count = notes.rescan()?;
+        if let Ok(root) = notes.root() {
+            let on_disk = notes.list(None)?;
+            let _ = search.reconcile(&root, &on_disk);
+        }
+        Ok(count)
+    })
+    .await
 }

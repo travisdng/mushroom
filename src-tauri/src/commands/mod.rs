@@ -6,3 +6,4 @@
 pub mod app;
 pub mod config;
 pub mod notes;
+pub mod search;
