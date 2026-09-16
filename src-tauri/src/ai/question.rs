@@ -68,9 +68,7 @@ pub fn to_search_terms(question: &str) -> SearchTerms {
     let lowered = question.trim().to_lowercase();
     // Strip terminal punctuation only — an apostrophe or hyphen inside a word
     // belongs to the word.
-    let cleaned = lowered
-        .trim_end_matches(['?', '!', '.', ','])
-        .trim();
+    let cleaned = lowered.trim_end_matches(['?', '!', '.', ',']).trim();
 
     let quoted = quoted_phrases(cleaned);
     let without_frame = strip_frame(cleaned);

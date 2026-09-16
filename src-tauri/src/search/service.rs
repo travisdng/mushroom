@@ -16,7 +16,9 @@ use crate::error::AppError;
 use crate::notes::model::{NoteId, NoteMeta};
 use crate::search::indexer::{self, REBUILD_BATCH};
 use crate::search::query;
-use crate::search::retriever::{FtsRetriever, LoggingRetriever, RetrievalQuery, Retriever};
+use crate::search::retriever::{
+    FtsRetriever, LoggingRetriever, RetrievalQuery, RetrievedPassage, Retriever,
+};
 
 /// One note in a search result, with the passage that matched.
 #[derive(Debug, Clone, Serialize)]
@@ -60,6 +62,17 @@ pub struct IndexProgress {
     pub done: usize,
     pub total: usize,
     pub skipped: usize,
+}
+
+/// What retrieval found for a question, before it becomes context.
+#[derive(Debug, Clone)]
+pub struct QuestionContext {
+    pub passages: Vec<RetrievedPassage>,
+    /// Modified time per note path, for the excerpt headers.
+    pub modified: HashMap<String, i64>,
+    /// The terms actually searched, for the "searched for: …" line (R2.5).
+    pub terms: Vec<String>,
+    pub stale: bool,
 }
 
 pub struct SearchService {
@@ -287,15 +300,7 @@ impl SearchService {
             retriever.retrieve(&request)
         })?;
 
-        let modified: HashMap<String, i64> = self.with_db(|db| {
-            db.with("reading note times", |conn| {
-                let mut stmt = conn.prepare("SELECT path, modified_at FROM notes")?;
-                let rows = stmt.query_map([], |row| {
-                    Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-                })?;
-                rows.collect()
-            })
-        })?;
+        let modified = self.note_modified_times()?;
 
         let hits = passages
             .into_iter()
@@ -313,6 +318,60 @@ impl SearchService {
 
         Ok(SearchResults {
             hits,
+            terms: parsed.terms,
+            stale: self.is_stale(),
+        })
+    }
+
+    /// Modified time per note, keyed by the note's path.
+    fn note_modified_times(&self) -> Result<HashMap<String, i64>, AppError> {
+        self.with_db(|db| {
+            db.with("reading note times", |conn| {
+                let mut stmt = conn.prepare("SELECT path, modified_at FROM notes")?;
+                let rows = stmt.query_map([], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+                })?;
+                rows.collect()
+            })
+        })
+    }
+
+    /// Retrieve whole passages for a question (spec 05, R2.1).
+    ///
+    /// The same retriever `search` uses, with different limits: several
+    /// passages per note rather than one, because the model is being given
+    /// context to read, not a list to scan.
+    pub fn retrieve_passages(
+        &self,
+        text: &str,
+        folder: Option<String>,
+        limit: usize,
+        per_note_cap: usize,
+    ) -> Result<QuestionContext, AppError> {
+        let parsed = query::parse_any(text);
+        if parsed.is_empty() {
+            return Ok(QuestionContext {
+                passages: Vec::new(),
+                modified: HashMap::new(),
+                terms: parsed.terms,
+                stale: self.is_stale(),
+            });
+        }
+
+        let mut request = RetrievalQuery::new(text);
+        request.match_mode = query::Match::Any;
+        request.per_note_cap = per_note_cap;
+        request.limit = limit;
+        request.folder = folder;
+
+        let passages = self.with_db(|db| {
+            let retriever = LoggingRetriever::new(FtsRetriever::new(db));
+            retriever.retrieve(&request)
+        })?;
+
+        Ok(QuestionContext {
+            modified: self.note_modified_times()?,
+            passages,
             terms: parsed.terms,
             stale: self.is_stale(),
         })

@@ -43,6 +43,9 @@ pub struct RetrievedPassage {
 #[derive(Debug, Clone)]
 pub struct RetrievalQuery {
     pub text: String,
+    /// Whether every term must match or any may. Questions use
+    /// [`query::Match::Any`]; the search box uses the default.
+    pub match_mode: query::Match,
     pub limit: usize,
     /// At most this many passages from any one note, so a single long note
     /// cannot crowd out everything else.
@@ -55,6 +58,7 @@ impl RetrievalQuery {
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
+            match_mode: query::Match::All,
             limit: 30,
             per_note_cap: 3,
             folder: None,
@@ -80,7 +84,7 @@ impl<'a> FtsRetriever<'a> {
 
 impl Retriever for FtsRetriever<'_> {
     fn retrieve(&self, q: &RetrievalQuery) -> Result<Vec<RetrievedPassage>, AppError> {
-        let parsed = query::parse(&q.text);
+        let parsed = query::parse_with(&q.text, q.match_mode);
         if parsed.is_empty() {
             return Ok(Vec::new());
         }

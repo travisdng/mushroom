@@ -71,12 +71,38 @@ enum Token {
     Phrase(String),
 }
 
-/// Build an FTS5 expression from a person's query.
+/// How positive terms are combined.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Match {
+    /// Every term must appear. What someone typing two keywords into the
+    /// search box means.
+    All,
+    /// Any term may appear, ranked by how well it matches.
+    ///
+    /// For questions. A question expands to five or six terms, and requiring
+    /// all of them finds nothing: "gpu nodes shutting down too early" would
+    /// need a note containing the words "shutting" and "too". Recall is what
+    /// matters when the result is context for a model — bm25 puts the notes
+    /// matching more terms first, and an answer with nothing to cite is caught
+    /// by the citation check rather than by the query.
+    Any,
+}
+
+/// Build an FTS5 expression from a person's query, requiring every term.
 ///
 /// Supports quoted phrases, a leading `-` for exclusion, and a trailing `*`
 /// for prefix matching. Every other character FTS5 would treat as syntax is
 /// escaped into a literal.
 pub fn parse(input: &str) -> FtsQuery {
+    parse_with(input, Match::All)
+}
+
+/// Build an expression that matches any of the terms. See [`Match::Any`].
+pub fn parse_any(input: &str) -> FtsQuery {
+    parse_with(input, Match::Any)
+}
+
+pub fn parse_with(input: &str, mode: Match) -> FtsQuery {
     let mut clauses: Vec<String> = Vec::new();
     let mut terms: Vec<String> = Vec::new();
 
@@ -126,7 +152,11 @@ pub fn parse(input: &str) -> FtsQuery {
     let (positive, negative): (Vec<_>, Vec<_>) =
         clauses.into_iter().partition(|c| !c.starts_with("NOT "));
 
-    let mut expression = positive.join(" AND ");
+    let joiner = match mode {
+        Match::All => " AND ",
+        Match::Any => " OR ",
+    };
+    let mut expression = positive.join(joiner);
     for clause in negative {
         if expression.is_empty() {
             // A query of only exclusions matches nothing useful; drop them.
@@ -142,6 +172,23 @@ pub fn parse(input: &str) -> FtsQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn any_mode_joins_with_or_for_questions() {
+        // Requiring all of a question's terms finds nothing: this is the
+        // difference between the brief's example question working and not.
+        let q = parse_any("gpu nodes shutting down too early");
+        assert!(q.expression.contains(" OR "), "{}", q.expression);
+        assert!(!q.expression.contains(" AND "), "{}", q.expression);
+        assert_eq!(q.terms.len(), 6);
+    }
+
+    #[test]
+    fn any_mode_still_excludes_negated_terms() {
+        let q = parse_any("gpu -failure");
+        assert!(q.expression.contains("NOT"), "{}", q.expression);
+        assert!(!q.terms.contains(&"failure".to_string()));
+    }
 
     #[test]
     fn plain_words_become_an_and_query() {
