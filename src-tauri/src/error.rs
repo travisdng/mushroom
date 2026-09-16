@@ -66,6 +66,15 @@ pub enum AppError {
     #[error("the file is not text Mushroom can edit")]
     NoteNotText { path: PathBuf },
 
+    #[error("the note changed on disk since it was opened")]
+    NoteChangedOnDisk { path: PathBuf, disk_modified: i64 },
+
+    #[error("a note already exists there")]
+    NoteExists { path: PathBuf },
+
+    #[error("no notes folder has been chosen")]
+    NotesRootMissing,
+
     #[error("internal error")]
     Internal(String),
 }
@@ -220,6 +229,37 @@ impl From<AppError> for AppErrorDto {
                 ),
                 detail,
                 Some("Open it in a program that understands its format."),
+            ),
+
+            AppError::NoteChangedOnDisk { path, .. } => AppErrorDto::new(
+                "NOTE_CHANGED_ON_DISK",
+                "That note changed outside Mushroom",
+                format!(
+                    "{} was modified by another program after you opened it. \
+                     Mushroom has not saved, so neither version is lost.",
+                    path.display()
+                ),
+                detail,
+                Some("Choose whether to keep your version, load theirs, or save a copy."),
+            ),
+
+            AppError::NoteExists { path } => AppErrorDto::new(
+                "NOTE_EXISTS",
+                "There is already a note with that name",
+                format!(
+                    "{} already exists, and Mushroom will not overwrite it.",
+                    path.display()
+                ),
+                detail,
+                Some("Pick a different name."),
+            ),
+
+            AppError::NotesRootMissing => AppErrorDto::new(
+                "NOTES_ROOT_MISSING",
+                "Mushroom does not have a notes folder yet",
+                "Choose where your notes should live before creating one.".to_string(),
+                detail,
+                Some("Open Tools \u{2192} Settings to choose a folder."),
             ),
 
             AppError::Internal(_) => AppErrorDto::new(

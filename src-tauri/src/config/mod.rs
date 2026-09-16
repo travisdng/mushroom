@@ -58,6 +58,8 @@ impl Default for UiState {
 pub struct AppConfig {
     pub version: u32,
     pub ui: UiState,
+    /// Where the Markdown lives. `None` until first run resolves the default.
+    pub notes_root: Option<PathBuf>,
 }
 
 impl Default for AppConfig {
@@ -65,8 +67,21 @@ impl Default for AppConfig {
         Self {
             version: CONFIG_VERSION,
             ui: UiState::default(),
+            notes_root: None,
         }
     }
+}
+
+/// `%USERPROFILE%\Mushroom\notes`, the default home for a new install.
+pub fn default_notes_root() -> Option<PathBuf> {
+    std::env::var_os("USERPROFILE")
+        .map(PathBuf::from)
+        .or_else(dirs_home)
+        .map(|home| home.join("Mushroom").join("notes"))
+}
+
+fn dirs_home() -> Option<PathBuf> {
+    std::env::var_os("HOME").map(PathBuf::from)
 }
 
 pub fn config_path(data_dir: &Path) -> PathBuf {
