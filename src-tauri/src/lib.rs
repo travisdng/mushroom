@@ -21,7 +21,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Deliberately NOT app_data_dir(): that resolves to the bundle
-            // identifier (com.mushroom.app). The spec puts our data under the
+            // identifier (com.mushroom.desktop). The spec puts our data under the
             // product name, where a person would actually look for it.
             let data_dir = app
                 .path()
