@@ -13,9 +13,10 @@ use crate::error::AppError;
 
 pub mod secrets;
 
-/// Bumped to 2 when the AI section arrived. `serde(default)` means an older
-/// file still loads; the version is here so a real migration is possible.
-pub const CONFIG_VERSION: u32 = 2;
+/// 2 added the AI section; 3 added `AiConfig::configured`. `serde(default)`
+/// means an older file still loads; the version is here so a real migration is
+/// possible.
+pub const CONFIG_VERSION: u32 = 3;
 
 /// Settings for the AI service. The API key is deliberately absent — it lives
 /// in the OS credential store, never in this file (R2.1).
@@ -34,6 +35,14 @@ pub struct AiConfig {
     /// refuses `stream: true` is fallen back on automatically, so this only
     /// needs turning off to force the one-shot path.
     pub stream: bool,
+    /// Whether the user has ever applied AI settings.
+    ///
+    /// Not derivable from the other fields: `base_url` and `model` always hold
+    /// a plausible default, so a fresh install looks identical to one pointed
+    /// deliberately at a local LiteLLM. Without this, a first run would greet
+    /// the user with "could not connect to localhost:4000" instead of saying
+    /// AI is not set up yet (R1.6, R7.1).
+    pub configured: bool,
 }
 
 impl Default for AiConfig {
@@ -48,6 +57,7 @@ impl Default for AiConfig {
             temperature: 0.2,
             log_prompts: false,
             stream: true,
+            configured: false,
         }
     }
 }
@@ -218,6 +228,14 @@ fn migrate(mut config: AppConfig) -> AppConfig {
             to = CONFIG_VERSION,
             "settings migrated"
         );
+
+        // A file that already has an AI section was written by someone who had
+        // been through Settings, so they are configured. Only a genuinely new
+        // install starts at the current version with the flag still false.
+        if config.version >= 2 {
+            config.ai.configured = true;
+        }
+
         config.version = CONFIG_VERSION;
     }
     config
@@ -348,6 +366,43 @@ mod tests {
         save(dir.path(), &config).unwrap();
         let (again, _) = load(dir.path());
         assert_eq!(again.version, CONFIG_VERSION);
+    }
+
+    #[test]
+    fn a_fresh_install_is_not_treated_as_configured() {
+        // The whole point of the flag: defaults look plausible, so without it
+        // a first run cannot be told apart from a deliberate local setup.
+        let dir = tempfile::tempdir().unwrap();
+        let (config, _) = load(dir.path());
+        assert!(!config.ai.configured);
+        assert!(config.ai.is_configured(), "the defaults are still usable");
+    }
+
+    #[test]
+    fn an_existing_ai_section_counts_as_configured() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            config_path(dir.path()),
+            r#"{"version":2,"ui":{},"ai":{"baseUrl":"http://localhost:4000"}}"#,
+        )
+        .unwrap();
+
+        let (config, _) = load(dir.path());
+        assert!(
+            config.ai.configured,
+            "someone who had been through Settings must not be told to set it up again"
+        );
+    }
+
+    #[test]
+    fn a_pre_ai_config_is_not_treated_as_configured() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(config_path(dir.path()), r#"{"version":1,"ui":{}}"#).unwrap();
+        let (config, _) = load(dir.path());
+        assert!(
+            !config.ai.configured,
+            "v1 never had an AI section to set up"
+        );
     }
 
     #[test]

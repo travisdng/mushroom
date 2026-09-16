@@ -24,9 +24,11 @@ export function AiSearchPanel({
   onOpenSettings: () => void;
 }) {
   const ai = useAiSearch();
-  const { openNote } = useNotes();
+  const { notes, openNote } = useNotes();
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  /** A cited note that is no longer where the answer said it was (R5.6). */
+  const [unavailable, setUnavailable] = useState<string | null>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -35,7 +37,9 @@ export function AiSearchPanel({
       return;
     }
     getAiSettings()
-      .then((settings) => setConfigured(settings.config.baseUrl.trim() !== ""))
+      // The endpoint always holds a plausible default, so it cannot say
+      // whether anyone chose it. Only the explicit flag can.
+      .then((settings) => setConfigured(settings.config.configured))
       // If the settings cannot be read, assume configured rather than showing
       // "set me up" over a working install.
       .catch(() => setConfigured(true));
@@ -43,9 +47,17 @@ export function AiSearchPanel({
 
   const open = useCallback(
     (noteId: string, lineStart: number) => {
+      // Citations are resolved at click time, not when the answer was written.
+      // A note renamed or deleted since would otherwise make the link do
+      // nothing at all, which reads as a broken button.
+      if (!notes.some((note) => note.id === noteId)) {
+        setUnavailable(noteId);
+        return;
+      }
+      setUnavailable(null);
       void openNote(noteId, lineStart);
     },
-    [openNote],
+    [notes, openNote],
   );
 
   const openCitation = useCallback(
@@ -54,6 +66,7 @@ export function AiSearchPanel({
   );
 
   const submit = useCallback(() => {
+    setUnavailable(null);
     void ai.ask();
   }, [ai]);
 
@@ -144,6 +157,13 @@ export function AiSearchPanel({
           terms={ai.terms}
           onOpen={open}
         />
+
+        {unavailable ? (
+          <div className="ai-panel__unavailable">
+            That note is no longer at <code>{unavailable}</code>. It may have
+            been renamed, moved or deleted since this answer was written.
+          </div>
+        ) : null}
 
         {ai.error ? (
           <div className="ai-panel__error">

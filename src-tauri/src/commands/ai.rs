@@ -75,11 +75,14 @@ pub fn get_provider_defaults(provider: Provider) -> ProviderDefaults {
 #[tauri::command]
 pub fn set_ai_config(
     state: tauri::State<'_, AppState>,
-    config: AiConfig,
+    mut config: AiConfig,
 ) -> Result<AiSettings, AppErrorDto> {
     config
         .validate()
         .map_err(|message| AppError::InvalidSetting { message })?;
+
+    // Applying settings is what "configured" means, whatever the values are.
+    config.configured = true;
 
     let snapshot = {
         let mut current = state

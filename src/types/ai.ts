@@ -19,6 +19,9 @@ export type AiConfig = {
   maxContextTokens: number;
   temperature: number;
   logPrompts: boolean;
+  stream: boolean;
+  /** Whether AI settings have ever been applied. */
+  configured: boolean;
 };
 
 export type LastConnection = {
