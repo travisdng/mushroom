@@ -15,6 +15,8 @@ type DialogProps = {
   /** Hides Cancel, for purely informational dialogs like About. */
   acceptOnly?: boolean;
   acceptDisabled?: boolean;
+  /** Extra buttons after Cancel, for the period OK / Cancel / Apply row. */
+  footerExtra?: ReactNode;
   width?: number;
 };
 
@@ -31,6 +33,7 @@ export function Dialog({
   cancelLabel = "Cancel",
   acceptOnly,
   acceptDisabled,
+  footerExtra,
   width = 380,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -92,6 +95,7 @@ export function Dialog({
           {acceptOnly ? null : (
             <Button onClick={onClose}>{cancelLabel}</Button>
           )}
+          {footerExtra}
         </div>
       </div>
     </div>

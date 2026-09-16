@@ -159,11 +159,9 @@ impl AiClient {
         body: &serde_json::Value,
         model: &str,
     ) -> Result<reqwest::Response, AiError> {
-        let response = self
-            .post(url, body)
-            .send()
-            .await
-            .map_err(|e| AiError::from_reqwest(&e, &self.config.base_url, self.config.timeout_secs))?;
+        let response = self.post(url, body).send().await.map_err(|e| {
+            AiError::from_reqwest(&e, &self.config.base_url, self.config.timeout_secs)
+        })?;
 
         let status = response.status().as_u16();
         if status >= 400 {
@@ -340,7 +338,9 @@ impl AiClient {
             .timeout(TEST_TIMEOUT)
             .send()
             .await
-            .map_err(|e| AiError::from_reqwest(&e, &self.config.base_url, TEST_TIMEOUT.as_secs()))?;
+            .map_err(|e| {
+                AiError::from_reqwest(&e, &self.config.base_url, TEST_TIMEOUT.as_secs())
+            })?;
 
         let status = response.status().as_u16();
         if status >= 400 {
@@ -371,7 +371,10 @@ impl AiClient {
     /// An endpoint that does not implement `/models` is normal, not an error —
     /// the caller falls back to a free-text field (R4.2).
     pub async fn list_models(&self) -> Result<Vec<String>, AiError> {
-        let mut req = self.http.get(self.config.models_url()).timeout(TEST_TIMEOUT);
+        let mut req = self
+            .http
+            .get(self.config.models_url())
+            .timeout(TEST_TIMEOUT);
         if let Some(key) = &self.api_key {
             req = req.bearer_auth(key);
         }
@@ -403,7 +406,11 @@ impl AiClient {
 
 /// Build a request from config plus messages, so callers do not repeat the
 /// temperature and model plumbing.
-pub fn request_from(config: &AiConfig, messages: Vec<Message>, max_tokens: Option<u32>) -> ChatRequest {
+pub fn request_from(
+    config: &AiConfig,
+    messages: Vec<Message>,
+    max_tokens: Option<u32>,
+) -> ChatRequest {
     ChatRequest {
         model: config.model.clone(),
         messages,

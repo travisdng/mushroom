@@ -23,6 +23,7 @@ use crate::state::AppState;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Deliberately NOT app_data_dir(): that resolves to the bundle
             // identifier (com.mushroom.desktop). The spec puts our data under the
@@ -92,6 +93,7 @@ pub fn run() {
             commands::ai::set_ai_config,
             commands::ai::set_ai_key,
             commands::ai::clear_ai_key,
+            commands::ai::get_key_status,
             commands::ai::test_ai_connection,
             commands::ai::list_ai_models,
             commands::config::get_config,

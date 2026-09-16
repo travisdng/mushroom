@@ -21,6 +21,7 @@ import {
 import { EditorPane } from "../components/editor/EditorPane";
 import { SearchPanel } from "../components/search/SearchPanel";
 import { RebuildDialog } from "../components/search/RebuildDialog";
+import { SettingsDialog } from "../components/settings/SettingsDialog";
 import type { ViewMode } from "../components/editor/EditorPane";
 import { useShell, NOT_AVAILABLE } from "../hooks/useShell";
 import { useNotes } from "../hooks/useNotes";
@@ -41,6 +42,7 @@ type DialogKind =
   | { kind: "move"; id: string; title: string }
   | { kind: "delete-note"; id: string; title: string }
   | { kind: "rebuild" }
+  | { kind: "settings" }
   | null;
 
 export default function MainWindow() {
@@ -285,7 +287,7 @@ export default function MainWindow() {
           onSelect: () => setDialog({ kind: "rebuild" }),
         },
         { type: "separator" },
-        { type: "item", label: "Settings", mnemonic: "S" },
+        { type: "item", label: "Settings", mnemonic: "S", onSelect: () => setDialog({ kind: "settings" }) },
         { type: "item", label: "Diagnostics", mnemonic: "D" },
       ],
     },
@@ -369,6 +371,7 @@ export default function MainWindow() {
 
       <StatusBar />
 
+      {dialog?.kind === "settings" ? <SettingsDialog onClose={() => setDialog(null)} /> : null}
       {dialog?.kind === "about" ? <AboutDialog onClose={() => setDialog(null)} /> : null}
       {dialog?.kind === "shortcuts" ? <ShortcutsDialog onClose={() => setDialog(null)} /> : null}
 

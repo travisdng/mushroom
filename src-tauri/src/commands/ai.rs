@@ -105,17 +105,20 @@ pub fn set_ai_config(
 
 #[derive(Debug, Deserialize)]
 pub struct KeyInput {
+    /// Named explicitly rather than read from the saved config. The Settings
+    /// dialog can have a different provider selected than the one last
+    /// applied, and storing an OpenAI key under LiteLLM because the user had
+    /// not pressed Apply yet is the kind of bug nobody would think to look for.
+    pub provider: Provider,
     pub key: String,
 }
 
-/// Store the key for the currently selected provider.
+/// Store the key for a provider.
 #[tauri::command]
 pub fn set_ai_key(
     state: tauri::State<'_, AppState>,
     input: KeyInput,
 ) -> Result<KeyStatus, AppErrorDto> {
-    let provider = current_provider(&state)?;
-
     if input.key.trim().is_empty() {
         return Err(AppError::InvalidSetting {
             message: "Enter a key, or use Clear to remove the stored one.".into(),
@@ -123,7 +126,7 @@ pub fn set_ai_key(
         .into());
     }
 
-    let status = secrets::set(provider, input.key.trim());
+    let status = secrets::set(input.provider, input.key.trim());
     // The client holds the key, so it has to be rebuilt for the new one to be
     // used — otherwise the next request still sends the old key.
     state.ai.rebuild();
@@ -131,33 +134,34 @@ pub fn set_ai_key(
 }
 
 #[tauri::command]
-pub fn clear_ai_key(state: tauri::State<'_, AppState>) -> Result<KeyStatus, AppErrorDto> {
-    let provider = current_provider(&state)?;
+pub fn clear_ai_key(
+    state: tauri::State<'_, AppState>,
+    provider: Provider,
+) -> Result<KeyStatus, AppErrorDto> {
     secrets::clear(provider);
     state.ai.rebuild();
     Ok(secrets::status(provider))
 }
 
-fn current_provider(state: &AppState) -> Result<Provider, AppError> {
-    Ok(state
-        .config
-        .lock()
-        .map_err(|_| AppError::Internal("settings lock poisoned".into()))?
-        .ai
-        .provider)
+/// The key status for a provider the user is considering but has not applied.
+#[tauri::command]
+pub fn get_key_status(provider: Provider) -> KeyStatus {
+    secrets::status(provider)
 }
 
+/// Test the settings the user is looking at, which may not be the saved ones.
 #[tauri::command]
 pub async fn test_ai_connection(
     state: tauri::State<'_, AppState>,
+    config: Option<AiConfig>,
 ) -> Result<LastConnection, AppErrorDto> {
     let ai = state.ai.clone();
-    match ai.test_connection().await {
+    match ai.test_connection(config).await {
         // Both outcomes are reported the same way: Test Connection failing is
         // an answer, not an exception, and the dialog shows it in place.
-        Ok(_) | Err(_) => ai.last_connection().ok_or_else(|| {
-            AppError::Internal("connection test produced no result".into()).into()
-        }),
+        Ok(_) | Err(_) => ai
+            .last_connection()
+            .ok_or_else(|| AppError::Internal("connection test produced no result".into()).into()),
     }
 }
 

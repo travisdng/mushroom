@@ -83,10 +83,7 @@ impl AiService {
     }
 
     pub fn config(&self) -> AiConfig {
-        self.config
-            .lock()
-            .map(|c| c.clone())
-            .unwrap_or_default()
+        self.config.lock().map(|c| c.clone()).unwrap_or_default()
     }
 
     fn client(&self) -> Result<Arc<AiClient>, AiError> {
@@ -130,9 +127,22 @@ impl AiService {
         outcome
     }
 
-    pub async fn test_connection(&self) -> Result<ConnectionInfo, AiError> {
-        let client = self.client()?;
-        let config = self.config();
+    /// Test an endpoint, optionally one that has not been saved yet.
+    ///
+    /// Building a throwaway client means Test Connection does not have to
+    /// persist first — otherwise Cancel could not truly discard, because
+    /// trying a wrong endpoint would already have written it to disk.
+    pub async fn test_connection(
+        &self,
+        candidate: Option<AiConfig>,
+    ) -> Result<ConnectionInfo, AiError> {
+        let config = candidate.unwrap_or_else(|| self.config());
+
+        let client = match &config.validate() {
+            Ok(()) => AiClient::new(config.clone(), secrets::get(config.provider))?,
+            Err(_) => return Err(AiError::Unconfigured),
+        };
+
         let outcome = client.test_connection().await;
 
         let record = match &outcome {
@@ -152,7 +162,9 @@ impl AiService {
                     message: format!(
                         "Connected to {} as {} in {} ms.",
                         host_of(&info.endpoint),
-                        info.provider_reported_model.as_deref().unwrap_or(&info.model),
+                        info.provider_reported_model
+                            .as_deref()
+                            .unwrap_or(&info.model),
                         info.latency_ms
                     ),
                     at: now(),
@@ -172,7 +184,13 @@ impl AiService {
                     endpoint: config.base_url.clone(),
                     model: config.model.clone(),
                     latency_ms: None,
-                    message: dto.message,
+                    // The hint is the actionable half — "try adding /v1" is
+                    // worth more than "returned 404", so it goes in the line
+                    // the user actually reads.
+                    message: match dto.hint {
+                        Some(hint) => format!("{} {hint}", dto.message),
+                        None => dto.message,
+                    },
                     at: now(),
                 }
             }
@@ -296,7 +314,10 @@ mod tests {
         assert!(service.client().is_err());
 
         service.set_config(AiConfig::default());
-        assert!(service.client().is_ok(), "a valid config should give a client");
+        assert!(
+            service.client().is_ok(),
+            "a valid config should give a client"
+        );
         assert_eq!(service.config().base_url, AiConfig::default().base_url);
     }
 

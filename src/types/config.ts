@@ -1,5 +1,7 @@
 /** Mirrors `UiState` / `AppConfig` in src-tauri/src/config/mod.rs. */
 
+import type { AiConfig } from "./ai";
+
 export type WindowRect = {
   x: number;
   y: number;
@@ -21,4 +23,7 @@ export type UiState = {
 export type AppConfig = {
   version: number;
   ui: UiState;
+  /** Null until first run resolves the default. */
+  notesRoot: string | null;
+  ai: AiConfig;
 };

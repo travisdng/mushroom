@@ -165,7 +165,10 @@ mod tests {
         let out = redact("calling with sk-abc123DEF456ghi789 now");
         assert!(!out.contains("abc123DEF456ghi789"), "{out}");
         assert!(out.contains("sk-***"));
-        assert!(out.contains("now"), "surrounding text should survive: {out}");
+        assert!(
+            out.contains("now"),
+            "surrounding text should survive: {out}"
+        );
     }
 
     #[test]
@@ -238,7 +241,10 @@ mod tests {
         });
 
         let text = std::fs::read_to_string(&path).unwrap();
-        assert!(!text.is_empty(), "the test wrote nothing, so it proves nothing");
+        assert!(
+            !text.is_empty(),
+            "the test wrote nothing, so it proves nothing"
+        );
         assert!(
             !text.contains("NEVERWRITEME"),
             "a key reached the log file:\n{text}"

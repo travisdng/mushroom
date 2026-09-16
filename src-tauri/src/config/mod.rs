@@ -188,12 +188,31 @@ pub fn load(data_dir: &Path) -> (AppConfig, Option<AppError>) {
     };
 
     match serde_json::from_str::<AppConfig>(&text) {
-        Ok(config) => (config, None),
+        Ok(config) => (migrate(config), None),
         Err(source) => (
             AppConfig::default(),
             Some(AppError::ConfigParse { path, source }),
         ),
     }
+}
+
+/// Bring an older file up to the current schema.
+///
+/// v1 -> v2 added the AI section, which `serde(default)` has already filled in
+/// by the time we get here. The only thing left is to record that it happened:
+/// without this the file keeps claiming v1 forever, and a future migration
+/// keyed on the version would run against data that has already been migrated.
+fn migrate(mut config: AppConfig) -> AppConfig {
+    if config.version < CONFIG_VERSION {
+        tracing::info!(
+            target: "app",
+            from = config.version,
+            to = CONFIG_VERSION,
+            "settings migrated"
+        );
+        config.version = CONFIG_VERSION;
+    }
+    config
 }
 
 pub fn save(data_dir: &Path, config: &AppConfig) -> Result<(), AppError> {
@@ -304,6 +323,32 @@ mod tests {
             max_context_tokens: 10,
             ..a
         });
+    }
+
+    #[test]
+    fn an_older_file_is_marked_as_migrated() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(config_path(dir.path()), r#"{"version":1,"ui":{}}"#).unwrap();
+
+        let (config, _) = load(dir.path());
+        assert_eq!(
+            config.version, CONFIG_VERSION,
+            "a file left claiming v1 would be migrated again next time"
+        );
+
+        // And the bump survives a round trip, rather than being recomputed.
+        save(dir.path(), &config).unwrap();
+        let (again, _) = load(dir.path());
+        assert_eq!(again.version, CONFIG_VERSION);
+    }
+
+    #[test]
+    fn a_newer_file_is_left_alone() {
+        // A config from a future version must not be silently downgraded.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(config_path(dir.path()), r#"{"version":99,"ui":{}}"#).unwrap();
+        let (config, _) = load(dir.path());
+        assert_eq!(config.version, 99);
     }
 
     #[test]

@@ -59,7 +59,11 @@ async fn client_for(server: &MockServer) -> AiClient {
 #[tokio::test]
 async fn a_successful_completion_returns_content_and_usage() {
     let server = MockServer::start().await;
-    mount_chat(&server, ResponseTemplate::new(200).set_body_json(completion_body("Hi there"))).await;
+    mount_chat(
+        &server,
+        ResponseTemplate::new(200).set_body_json(completion_body("Hi there")),
+    )
+    .await;
 
     let response = client_for(&server)
         .await
@@ -89,7 +93,10 @@ async fn the_key_is_sent_as_a_bearer_token_when_there_is_one() {
         .await;
 
     let client = AiClient::new(config_for(&server), Some("sk-test-key".into())).unwrap();
-    assert!(client.chat(request(), CancellationToken::new()).await.is_ok());
+    assert!(client
+        .chat(request(), CancellationToken::new())
+        .await
+        .is_ok());
 }
 
 #[tokio::test]
@@ -110,8 +117,14 @@ async fn no_authorization_header_is_sent_when_there_is_no_key() {
         .await;
 
     let client = AiClient::new(config_for(&server), None).unwrap();
-    client.chat(request(), CancellationToken::new()).await.unwrap();
-    assert!(!*seen.lock().unwrap(), "no key means no Authorization header");
+    client
+        .chat(request(), CancellationToken::new())
+        .await
+        .unwrap();
+    assert!(
+        !*seen.lock().unwrap(),
+        "no key means no Authorization header"
+    );
 }
 
 #[tokio::test]
@@ -130,7 +143,10 @@ async fn a_blank_key_counts_as_no_key() {
         .await;
 
     let client = AiClient::new(config_for(&server), Some("   ".into())).unwrap();
-    client.chat(request(), CancellationToken::new()).await.unwrap();
+    client
+        .chat(request(), CancellationToken::new())
+        .await
+        .unwrap();
     assert!(!*seen.lock().unwrap(), "whitespace is not a key");
 }
 
@@ -236,7 +252,10 @@ async fn a_200_with_no_choices_yields_empty_content_rather_than_an_error() {
         .await
         .unwrap();
     assert!(response.content.is_empty());
-    assert_eq!(response.model, "test-model", "falls back to what we asked for");
+    assert_eq!(
+        response.model, "test-model",
+        "falls back to what we asked for"
+    );
 }
 
 #[tokio::test]
@@ -333,7 +352,10 @@ async fn a_500_twice_gives_up_rather_than_hammering() {
         .chat(request(), CancellationToken::new())
         .await
         .unwrap_err();
-    assert!(matches!(err, AiError::ServerError { status: 500 }), "{err:?}");
+    assert!(
+        matches!(err, AiError::ServerError { status: 500 }),
+        "{err:?}"
+    );
     assert_eq!(
         server.received_requests().await.unwrap().len(),
         2,
@@ -406,12 +428,20 @@ async fn cancelling_stops_an_in_flight_request() {
 #[tokio::test]
 async fn a_token_cancelled_before_the_call_never_sends_anything() {
     let server = MockServer::start().await;
-    mount_chat(&server, ResponseTemplate::new(200).set_body_json(completion_body("x"))).await;
+    mount_chat(
+        &server,
+        ResponseTemplate::new(200).set_body_json(completion_body("x")),
+    )
+    .await;
 
     let cancel = CancellationToken::new();
     cancel.cancel();
 
-    let err = client_for(&server).await.chat(request(), cancel).await.unwrap_err();
+    let err = client_for(&server)
+        .await
+        .chat(request(), cancel)
+        .await
+        .unwrap_err();
     assert!(matches!(err, AiError::Cancelled), "{err:?}");
     assert!(
         server.received_requests().await.unwrap().is_empty(),
@@ -604,7 +634,11 @@ async fn streaming_asks_the_service_to_stream() {
 #[tokio::test]
 async fn a_non_streaming_request_does_not_ask_for_a_stream() {
     let server = MockServer::start().await;
-    mount_chat(&server, ResponseTemplate::new(200).set_body_json(completion_body("x"))).await;
+    mount_chat(
+        &server,
+        ResponseTemplate::new(200).set_body_json(completion_body("x")),
+    )
+    .await;
 
     client_for(&server)
         .await
@@ -624,13 +658,20 @@ async fn a_non_streaming_request_does_not_ask_for_a_stream() {
 #[tokio::test]
 async fn test_connection_reports_endpoint_model_and_latency() {
     let server = MockServer::start().await;
-    mount_chat(&server, ResponseTemplate::new(200).set_body_json(completion_body("pong"))).await;
+    mount_chat(
+        &server,
+        ResponseTemplate::new(200).set_body_json(completion_body("pong")),
+    )
+    .await;
 
     let info = client_for(&server).await.test_connection().await.unwrap();
 
     assert_eq!(info.endpoint, server.uri());
     assert_eq!(info.model, "test-model");
-    assert_eq!(info.provider_reported_model.as_deref(), Some("test-model-actual"));
+    assert_eq!(
+        info.provider_reported_model.as_deref(),
+        Some("test-model-actual")
+    );
 
     let requests = server.received_requests().await.unwrap();
     let body: serde_json::Value = serde_json::from_slice(&requests[0].body).unwrap();
@@ -646,7 +687,11 @@ async fn test_connection_surfaces_a_401_plainly() {
     let server = MockServer::start().await;
     mount_chat(&server, ResponseTemplate::new(401)).await;
 
-    let err = client_for(&server).await.test_connection().await.unwrap_err();
+    let err = client_for(&server)
+        .await
+        .test_connection()
+        .await
+        .unwrap_err();
     assert!(matches!(err, AiError::Unauthorized), "{err:?}");
 }
 

@@ -1,0 +1,60 @@
+/* ------------------------------------------------------------- Settings */
+
+/* Explanatory lines under a field: quieter than the label, aligned to the
+   field column so the group reads as one block. */
+.settings__note {
+  margin: 0 0 8px 96px;
+  color: var(--text-disabled);
+}
+
+.settings__check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* The Test Connection result sits beside the button and wraps rather than
+   widening the dialog. */
+.settings__result {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settings__result[data-ok="false"] {
+  color: #800000;
+}
+
+.settings__apply-note {
+  margin-top: 2px;
+  padding: 4px 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--bevel-shadow);
+  border-right-color: var(--bevel-light);
+  border-bottom-color: var(--bevel-light);
+}
+
+/* A select styled as a period drop-down. The native arrow is left alone —
+   redrawing it would need an appearance reset and a background image, and the
+   browser's own is closer to the era than anything worth hand-rolling. */
+select.field {
+  height: 21px;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-ui);
+}
+
+/* ------------------------------------------------------- AI unconfigured */
+
+.ai-unconfigured {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* WebView2 adds its own "reveal password" eye to a password field. The key is
+   meant to be masked, and a one-click reveal on a shared screen defeats that
+   as thoroughly as printing it. */
+.field[type="password"]::-ms-reveal,
+.field[type="password"]::-ms-clear {
+  display: none;
+}
