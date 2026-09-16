@@ -5,6 +5,7 @@ import { Panel } from "../components/common/Panel";
 import { Dialog } from "../components/common/Dialog";
 import { EmptyState } from "../components/common/EmptyState";
 import { Icon } from "../components/common/Icon";
+import { AiUnconfigured } from "../components/common/AiUnconfigured";
 
 /**
  * Temporary control gallery, reachable at #gallery in `npm run dev`.
@@ -108,6 +109,11 @@ export default function Gallery() {
                 <Button disabled>Ask Mushroom</Button>
               </div>
             </div>
+          </Panel>
+
+          {/* Deliberately not styled as an error: nothing has gone wrong. */}
+          <Panel title="AI Search" flat style={{ width: 260 }}>
+            <AiUnconfigured onOpenSettings={() => setDialogOpen(true)} />
           </Panel>
         </div>
       </fieldset>

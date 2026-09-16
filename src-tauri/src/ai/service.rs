@@ -127,6 +127,22 @@ impl AiService {
         outcome
     }
 
+    /// A client for settings that may not have been saved yet.
+    ///
+    /// Anything the Settings dialog triggers has to use what is on screen, not
+    /// what is on disk. Getting this wrong is not merely confusing: the key is
+    /// stored the moment you press Save key, so a request built from the saved
+    /// config would send the newly-entered key to the *previous* endpoint.
+    fn client_for(&self, candidate: Option<AiConfig>) -> Result<(AiConfig, AiClient), AiError> {
+        let config = candidate.unwrap_or_else(|| self.config());
+        if config.validate().is_err() {
+            return Err(AiError::Unconfigured);
+        }
+        // The key belongs to the candidate's provider, not the saved one.
+        let client = AiClient::new(config.clone(), secrets::get(config.provider))?;
+        Ok((config, client))
+    }
+
     /// Test an endpoint, optionally one that has not been saved yet.
     ///
     /// Building a throwaway client means Test Connection does not have to
@@ -136,13 +152,7 @@ impl AiService {
         &self,
         candidate: Option<AiConfig>,
     ) -> Result<ConnectionInfo, AiError> {
-        let config = candidate.unwrap_or_else(|| self.config());
-
-        let client = match &config.validate() {
-            Ok(()) => AiClient::new(config.clone(), secrets::get(config.provider))?,
-            Err(_) => return Err(AiError::Unconfigured),
-        };
-
+        let (config, client) = self.client_for(candidate)?;
         let outcome = client.test_connection().await;
 
         let record = match &outcome {
@@ -203,8 +213,10 @@ impl AiService {
         outcome
     }
 
-    pub async fn list_models(&self) -> Result<Vec<String>, AiError> {
-        self.client()?.list_models().await
+    /// Models offered by an endpoint, which may not be the saved one.
+    pub async fn list_models(&self, candidate: Option<AiConfig>) -> Result<Vec<String>, AiError> {
+        let (_, client) = self.client_for(candidate)?;
+        client.list_models().await
     }
 
     /// Log what was asked for — never the prompt itself unless the user has
@@ -319,6 +331,49 @@ mod tests {
             "a valid config should give a client"
         );
         assert_eq!(service.config().base_url, AiConfig::default().base_url);
+    }
+
+    #[test]
+    fn a_candidate_config_is_used_in_place_of_the_saved_one() {
+        // The bug this guards against sent a key entered for one provider to
+        // the endpoint that was still saved from the previous one, because the
+        // request was built from stored settings rather than from the screen.
+        let saved = AiConfig {
+            base_url: "http://saved.example/v1".into(),
+            ..AiConfig::default()
+        };
+        let service = AiService::new(saved);
+
+        let candidate = AiConfig {
+            base_url: "http://typed-just-now.example/v1".into(),
+            model: "some-other-model".into(),
+            ..AiConfig::default()
+        };
+
+        let (used, client) = service
+            .client_for(Some(candidate))
+            .expect("a valid candidate should build a client");
+
+        assert_eq!(used.base_url, "http://typed-just-now.example/v1");
+        assert_eq!(client.config().base_url, "http://typed-just-now.example/v1");
+        assert_eq!(client.config().model, "some-other-model");
+
+        // And with no candidate it still falls back to what is saved.
+        let (fallback, _) = service.client_for(None).unwrap();
+        assert_eq!(fallback.base_url, "http://saved.example/v1");
+    }
+
+    #[test]
+    fn an_invalid_candidate_is_refused_rather_than_sent() {
+        let service = AiService::new(AiConfig::default());
+        let bad = AiConfig {
+            base_url: "not-a-url".into(),
+            ..AiConfig::default()
+        };
+        assert!(matches!(
+            service.client_for(Some(bad)),
+            Err(AiError::Unconfigured)
+        ));
     }
 
     #[test]

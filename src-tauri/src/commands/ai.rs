@@ -178,10 +178,13 @@ pub struct ModelList {
 }
 
 #[tauri::command]
-pub async fn list_ai_models(state: tauri::State<'_, AppState>) -> Result<ModelList, AppErrorDto> {
+pub async fn list_ai_models(
+    state: tauri::State<'_, AppState>,
+    config: Option<AiConfig>,
+) -> Result<ModelList, AppErrorDto> {
     let ai = state.ai.clone();
 
-    Ok(match ai.list_models().await {
+    Ok(match ai.list_models(config).await {
         Ok(models) => ModelList {
             available: !models.is_empty(),
             message: models

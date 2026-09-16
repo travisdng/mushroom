@@ -53,6 +53,7 @@ export function testAiConnection(config?: AiConfig): Promise<LastConnection> {
   return call<LastConnection>("test_ai_connection", { config: config ?? null });
 }
 
-export function listAiModels(): Promise<ModelList> {
-  return call<ModelList>("list_ai_models");
+/** Lists models from `config` if given, otherwise from whatever is saved. */
+export function listAiModels(config?: AiConfig): Promise<ModelList> {
+  return call<ModelList>("list_ai_models", { config: config ?? null });
 }

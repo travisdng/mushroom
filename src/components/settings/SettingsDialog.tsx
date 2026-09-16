@@ -118,6 +118,11 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     // A result for the old endpoint or model would be read as a result for the
     // new one, which is worse than showing nothing.
     if ("baseUrl" in patch || "model" in patch) setTestResult(null);
+    // Models came from the old endpoint and may not exist on the new one.
+    if ("baseUrl" in patch) {
+      setModels(null);
+      setModelsNote(null);
+    }
     setDraft((current) => (current ? { ...current, ...patch } : current));
   }, []);
 
@@ -150,11 +155,18 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     [update],
   );
 
+  /** The settings as typed, for the calls that must not use the saved ones. */
+  const candidate = useCallback((): AiConfig | undefined => {
+    if (!draft) return undefined;
+    const { notesRoot: _root, ...rest } = draft;
+    return { ...rest, baseUrl: rest.baseUrl.trim(), model: rest.model.trim() };
+  }, [draft]);
+
   const refreshModels = useCallback(async () => {
     setModelsBusy(true);
     setModelsNote(null);
     try {
-      const list = await ai.listAiModels();
+      const list = await ai.listAiModels(candidate());
       setModels(list.models);
       setModelsNote(list.message);
     } catch (raw) {
@@ -163,7 +175,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     } finally {
       setModelsBusy(false);
     }
-  }, []);
+  }, [candidate]);
 
   const browse = useCallback(async () => {
     const chosen = await openFolderPicker({
@@ -220,14 +232,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     try {
       // Test what is on screen, not what was last saved — and without saving
       // it, so Cancel still discards a wrong endpoint you only tried.
-      const { notesRoot: _ignored, ...candidate } = draft;
-      setTestResult(
-        await ai.testAiConnection({
-          ...candidate,
-          baseUrl: candidate.baseUrl.trim(),
-          model: candidate.model.trim(),
-        }),
-      );
+      setTestResult(await ai.testAiConnection(candidate()));
     } catch (raw) {
       setTestResult({
         ok: false,
@@ -240,7 +245,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     } finally {
       setTesting(false);
     }
-  }, [draft]);
+  }, [candidate, draft]);
 
   if (loadError) {
     return (
@@ -327,6 +332,37 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
         {errors.model ? <div className="field-error">{errors.model}</div> : null}
+
+        {models && models.length > 0 ? (
+          // A plain list, not only the field's own datalist. A datalist
+          // filters its options by what is already typed, so clicking the
+          // arrow with a model name in the box shows you that one name — which
+          // is no use at all when the point of Refresh is to find out what the
+          // service offers.
+          <div className="field-row">
+            <span style={{ minWidth: 90 }} />
+            <select
+              className="field"
+              value=""
+              aria-label="Models this service offers"
+              onChange={(e) => {
+                if (!e.target.value) return;
+                touched.current.model = true;
+                update({ model: e.target.value });
+              }}
+            >
+              <option value="">
+                {models.length} model{models.length === 1 ? "" : "s"} offered…
+              </option>
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
         {modelsNote ? <div className="settings__note">{modelsNote}</div> : null}
 
         <div className="field-row">
