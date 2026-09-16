@@ -44,14 +44,10 @@
   color: var(--text-disabled);
 }
 
-/* Mnemonic underline appears once Alt has been pressed. */
+/* Mnemonics are always underlined, as they were in Windows 95/98. Hiding them
+   until Alt is pressed arrived with Windows 2000 and reads as modern. */
 .menubar__title .mnemonic,
 .menuitem__label .mnemonic {
-  text-decoration: none;
-}
-
-.app[data-mnemonics="true"] .menubar__title .mnemonic,
-.app[data-mnemonics="true"] .menuitem__label .mnemonic {
   text-decoration: underline;
 }
 

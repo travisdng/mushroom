@@ -19,7 +19,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let data_dir = app.path().app_data_dir().map_err(|_| AppError::NoDataDir)?;
+            // Deliberately NOT app_data_dir(): that resolves to the bundle
+            // identifier (com.mushroom.app). The spec puts our data under the
+            // product name, where a person would actually look for it.
+            let data_dir = app
+                .path()
+                .data_dir()
+                .map_err(|_| AppError::NoDataDir)?
+                .join("Mushroom");
             std::fs::create_dir_all(&data_dir).ok();
 
             let log_dir = data_dir.join("logs");

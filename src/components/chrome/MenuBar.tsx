@@ -5,7 +5,7 @@ export type MenuItemDef =
   | {
       type: "item";
       label: string;
-      /** Letter to underline once Alt has been pressed. Must appear in label. */
+      /** Letter to underline, and the Alt accelerator. Must appear in label. */
       mnemonic?: string;
       accel?: string;
       checked?: boolean;
@@ -68,11 +68,13 @@ export function MenuBar({ menus }: { menus: MenuDef[] }) {
     };
   }, [openIndex, close]);
 
-  // Alt reveals mnemonics and focuses the bar; Alt+letter opens that menu (R3.3).
+  // Alt focuses the bar; Alt+letter opens that menu (R3.3). Mnemonics are
+  // always underlined, so there is no reveal state to manage.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Alt" && !e.repeat) {
-        document.querySelector(".app")?.setAttribute("data-mnemonics", "true");
+        e.preventDefault();
+        barRef.current?.focus();
         return;
       }
       if (!e.altKey) return;
@@ -81,7 +83,6 @@ export function MenuBar({ menus }: { menus: MenuDef[] }) {
       );
       if (index >= 0) {
         e.preventDefault();
-        document.querySelector(".app")?.setAttribute("data-mnemonics", "true");
         openMenu(index);
         barRef.current?.focus();
       }
