@@ -1,0 +1,99 @@
+/**
+ * Mushroom design tokens.
+ *
+ * The ONLY place colours, bevels, and type sizes are defined. No component
+ * hard-codes a colour — see .kiro/steering/ui-retro.md.
+ */
+
+:root {
+  /* Surfaces */
+  --surface: #c0c0c0;
+  --surface-alt: #d4d0c8;
+  --field-bg: #ffffff;
+
+  /* Text */
+  --text: #000000;
+  --text-disabled: #808080;
+  --text-disabled-highlight: #ffffff;
+
+  /* Bevel edges, light source top-left */
+  --bevel-light: #ffffff;
+  --bevel-face: #dfdfdf;
+  --bevel-shadow: #808080;
+  --bevel-dark: #000000;
+
+  /* Selection */
+  --selection-bg: #000080;
+  --selection-text: #ffffff;
+
+  /* Title bar — the one permitted gradient */
+  --titlebar-a: #000080;
+  --titlebar-b: #1084d0;
+  --titlebar-inactive-a: #808080;
+  --titlebar-inactive-b: #b5b5b5;
+  --titlebar-text: #ffffff;
+
+  /* Type */
+  --font-ui: Tahoma, "MS Sans Serif", "Segoe UI", sans-serif;
+  --font-mono: Consolas, "Lucida Console", "Courier New", monospace;
+  --font-size-ui: 11px;
+  --font-size-editor: 13px;
+  --line-height-ui: 1.35;
+
+  /* Metrics — dense by design */
+  --row-height: 18px;
+  --titlebar-height: 18px;
+  --menubar-height: 20px;
+  --statusbar-height: 20px;
+  --splitter-size: 4px;
+  --panel-header-height: 18px;
+  --icon-size: 16px;
+}
+
+/**
+ * Bevel helpers. Applied as classes rather than repeated per component so
+ * that "raised" means exactly one thing everywhere in the app.
+ */
+
+.bevel-raised {
+  border-top: 1px solid var(--bevel-light);
+  border-left: 1px solid var(--bevel-light);
+  border-right: 1px solid var(--bevel-dark);
+  border-bottom: 1px solid var(--bevel-dark);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-face);
+}
+
+.bevel-sunken {
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+  box-shadow:
+    inset 1px 1px 0 var(--bevel-dark),
+    inset -1px -1px 0 var(--bevel-face);
+}
+
+/** Thin single-line variants, for status cells and group boxes. */
+
+.bevel-raised-thin {
+  border-top: 1px solid var(--bevel-light);
+  border-left: 1px solid var(--bevel-light);
+  border-right: 1px solid var(--bevel-shadow);
+  border-bottom: 1px solid var(--bevel-shadow);
+}
+
+.bevel-sunken-thin {
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+/** Focus is a dotted outline, not a glow. */
+
+.focus-ring:focus-visible {
+  outline: 1px dotted var(--text);
+  outline-offset: -3px;
+}

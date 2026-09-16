@@ -1,0 +1,103 @@
+/**
+ * Minimal reset. Its job is to remove every visible sign that this is a
+ * web view (R1.7), not to normalise browsers.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-ui);
+  line-height: var(--line-height-ui);
+
+  /* Chrome is not a document: no selecting, no dragging, no callouts. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  cursor: default;
+}
+
+/* Text the user actually owns opts back in. */
+.selectable,
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: auto;
+}
+
+img,
+a {
+  -webkit-user-drag: none;
+}
+
+/* Inputs inherit the UI font rather than the platform's form font. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* No modern focus rings — see .focus-ring in tokens.css. */
+:focus {
+  outline: none;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+/* Square, bevelled scrollbars. WebView2 is Chromium, so this works, and it
+   is a large part of the period feel. */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--surface-alt);
+  background-image: linear-gradient(
+      45deg,
+      var(--bevel-light) 25%,
+      transparent 25%
+    ),
+    linear-gradient(-45deg, var(--bevel-light) 25%, transparent 25%);
+  background-size: 2px 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface);
+  border-top: 1px solid var(--bevel-light);
+  border-left: 1px solid var(--bevel-light);
+  border-right: 1px solid var(--bevel-dark);
+  border-bottom: 1px solid var(--bevel-dark);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-face);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--surface);
+}
