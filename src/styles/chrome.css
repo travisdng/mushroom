@@ -1,0 +1,231 @@
+/**
+ * Window chrome: the app frame inside the native window — menu bar, toolbar,
+ * work area, status bar.
+ */
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------- Menu bar */
+
+.menubar {
+  flex: none;
+  height: var(--menubar-height);
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border-bottom: 1px solid var(--bevel-shadow);
+  box-shadow: 0 1px 0 var(--bevel-light);
+  position: relative;
+  z-index: 30;
+}
+
+.menubar__title {
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+}
+
+.menubar__title[aria-expanded="true"] {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.menubar__title:disabled {
+  color: var(--text-disabled);
+}
+
+/* Mnemonic underline appears once Alt has been pressed. */
+.menubar__title .mnemonic,
+.menuitem__label .mnemonic {
+  text-decoration: none;
+}
+
+.app[data-mnemonics="true"] .menubar__title .mnemonic,
+.app[data-mnemonics="true"] .menuitem__label .mnemonic {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------- Drop-downs */
+
+.menu {
+  position: absolute;
+  top: 100%;
+  min-width: 170px;
+  padding: 2px;
+  background: var(--surface);
+  border-top: 1px solid var(--bevel-light);
+  border-left: 1px solid var(--bevel-light);
+  border-right: 1px solid var(--bevel-dark);
+  border-bottom: 1px solid var(--bevel-dark);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-face);
+  z-index: 40;
+}
+
+.menuitem {
+  width: 100%;
+  height: var(--row-height);
+  padding: 0 6px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.menuitem:not(:disabled)[data-active="true"] {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.menuitem:disabled {
+  color: var(--text-disabled);
+  text-shadow: 1px 1px 0 var(--text-disabled-highlight);
+}
+
+.menuitem__label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.menuitem__accel {
+  flex: none;
+  white-space: nowrap;
+}
+
+.menuitem__check {
+  position: absolute;
+  left: 6px;
+}
+
+.menu__separator {
+  height: 0;
+  margin: 3px 2px;
+  border-top: 1px solid var(--bevel-shadow);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+/* ---------------------------------------------------------------- Toolbar */
+
+.toolbar {
+  flex: none;
+  height: 38px;
+  padding: 2px 3px;
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--bevel-shadow);
+  box-shadow: 0 1px 0 var(--bevel-light);
+}
+
+.toolbar__separator {
+  flex: none;
+  width: 0;
+  margin: 3px 3px;
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+}
+
+/* -------------------------------------------------------------- Work area */
+
+.workarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.sidebar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.editor-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-pane {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------- Splitters */
+
+.splitter {
+  flex: none;
+  background: var(--surface);
+}
+
+.splitter--vertical {
+  width: var(--splitter-size);
+  cursor: ew-resize;
+}
+
+.splitter--horizontal {
+  height: var(--splitter-size);
+  cursor: ns-resize;
+}
+
+.splitter[data-dragging="true"] {
+  background: var(--bevel-shadow);
+}
+
+/* ------------------------------------------------------------- Status bar */
+
+.statusbar {
+  flex: none;
+  height: var(--statusbar-height);
+  padding: 2px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  background: var(--surface);
+  border-top: 1px solid var(--bevel-light);
+}
+
+.statusbar__cell {
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+.statusbar__cell--grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.statusbar__cell--fixed {
+  flex: none;
+  width: 140px;
+}

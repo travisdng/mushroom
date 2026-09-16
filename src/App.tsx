@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
+import MainWindow from "./pages/MainWindow";
 import Gallery from "./pages/Gallery";
+import { ShellProvider } from "./hooks/useShell";
 
-/**
- * Placeholder shell. The real window chrome — menu bar, toolbar, panels,
- * status bar — arrives in tasks 12-17.
- *
- * `#gallery` renders the temporary control gallery from task 11.
- */
+/** `#gallery` renders the temporary control gallery from task 11. */
 export default function App() {
   const [hash, setHash] = useState(() => window.location.hash);
 
@@ -18,5 +15,9 @@ export default function App() {
 
   if (hash === "#gallery") return <Gallery />;
 
-  return <div style={{ padding: 12 }}>Mushroom</div>;
+  return (
+    <ShellProvider>
+      <MainWindow />
+    </ShellProvider>
+  );
 }
