@@ -12,7 +12,7 @@ dated version section and write the matching file in
 
 Nothing yet — v0.3.0 is the current tip.
 
-## [0.3.0] — pending smoke test
+## [0.3.0] — 2026-09-16
 
 Milestone 03 — local search. See
 [docs/releases/v0.3.0.md](docs/releases/v0.3.0.md).
@@ -29,6 +29,12 @@ Milestone 03 — local search. See
   heading-delimited passages with their line ranges.
 - `Retriever` trait with normalised scores, so semantic and hybrid retrieval
   can be added later without changing callers.
+
+### Fixed
+- Notes could not be found by their title when the body never used those
+  words; the title index was built but never queried.
+- A heading ran into the following body text when indexed, producing a single
+  token and making the first body word after every heading unsearchable.
 
 ### Known issues
 - Search is keyword-based; differently-worded queries will miss. Semantic
