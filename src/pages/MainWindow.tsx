@@ -52,6 +52,8 @@ export default function MainWindow() {
   const search = useSearch();
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [mode, setMode] = useState<ViewMode>("edit");
+  /** Bumped when Settings closes, so panels can re-read what changed. */
+  const [settingsVersion, setSettingsVersion] = useState(0);
   const { sidebarWidth, notebookHeight, aiWidth } = shell.ui;
   const workAreaRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -363,7 +365,10 @@ export default function MainWindow() {
             <Splitter orientation="vertical" onDrag={dragAi} label="Resize AI panel" />
             <div className="ai-pane" style={{ width: aiWidth }}>
               <Panel title="AI Search" flat>
-                <AiSearchPanel onOpenSettings={() => setDialog({ kind: "settings" })} />
+                <AiSearchPanel
+                  onOpenSettings={() => setDialog({ kind: "settings" })}
+                  settingsVersion={settingsVersion}
+                />
               </Panel>
             </div>
           </>
@@ -372,7 +377,14 @@ export default function MainWindow() {
 
       <StatusBar />
 
-      {dialog?.kind === "settings" ? <SettingsDialog onClose={() => setDialog(null)} /> : null}
+      {dialog?.kind === "settings" ? (
+        <SettingsDialog
+          onClose={() => {
+            setDialog(null);
+            setSettingsVersion((v) => v + 1);
+          }}
+        />
+      ) : null}
       {dialog?.kind === "about" ? <AboutDialog onClose={() => setDialog(null)} /> : null}
       {dialog?.kind === "shortcuts" ? <ShortcutsDialog onClose={() => setDialog(null)} /> : null}
 

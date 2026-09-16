@@ -10,7 +10,48 @@ dated version section and write the matching file in
 
 ## [Unreleased]
 
-Nothing yet — v0.4.0 is the current tip.
+Nothing yet — v0.5.0 is the current tip.
+
+## [0.5.0] — 2026-09-17
+
+Milestone 05 — AI search. See
+[docs/releases/v0.5.0.md](docs/releases/v0.5.0.md).
+
+### Added
+- **Ask questions of your notes.** An `AI SEARCH` panel with a question box,
+  `Ask Mushroom` / `Stop`, and a drop-down of your last twenty questions.
+- Answers stream in as they are written, with the notes retrieval found shown
+  first so there is something to read while the model thinks.
+- Inline `[1]` citations that open the cited note at the passage they came
+  from, a `Sources:` list showing the excerpt each answer was actually given,
+  and a collapsed `Also searched` list of notes that were retrieved but not
+  cited.
+- Grounding checks: an answer citing nothing is marked unverified, and a
+  citation to an excerpt that was never sent is called out.
+- A question with no matching notes never reaches the model at all.
+- `Tools → Settings` gained a streaming switch; a service that refuses
+  streaming falls back to a single request automatically.
+- Per-request usage records and totals for a future Diagnostics panel.
+
+### Fixed
+- Question retrieval required *every* word, so a question of five or six terms
+  found nothing. Questions now match any term, ranked; the search box is
+  unchanged.
+- `cargo test` deleted the developer's own stored API key: the credential tests
+  used the application's Credential Manager service name.
+- A `400 Bad Request` was retried, because every unclassified status became
+  `ServerError` and all of those were treated as transient.
+- A stream that broke part-way was re-requested in full, discarding the partial
+  answer already on screen.
+- The `AI is not configured` state could never appear, because the endpoint
+  always holds a plausible default — and once it could, configuring AI did not
+  clear it until the app was restarted.
+
+### Known issues
+- Retrieval is still keyword-based. A question worded differently from the note
+  will miss it; that is what v1.1 is for.
+- `Tools → Diagnostics` is still greyed out.
+- The installer is unsigned.
 
 ## [0.4.0] — 2026-09-16
 

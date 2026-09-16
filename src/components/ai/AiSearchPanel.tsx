@@ -8,6 +8,7 @@ import { RetrievedNotes } from "./RetrievedNotes";
 import { SourceList } from "./SourceList";
 import { useAiSearch } from "../../hooks/useAiSearch";
 import { useNotes } from "../../hooks/useNotes";
+import { useShell } from "../../hooks/useShell";
 import { getAiSettings } from "../../services/aiService";
 import { inDesktopApp } from "../../services/ipc";
 import type { Citation } from "../../types/aiSearch";
@@ -20,11 +21,19 @@ import type { Citation } from "../../types/aiSearch";
  */
 export function AiSearchPanel({
   onOpenSettings,
+  settingsVersion = 0,
 }: {
   onOpenSettings: () => void;
+  /**
+   * Bumped whenever the Settings dialog closes. Without it the panel would go
+   * on saying "not configured" after you had just configured it, until the
+   * app was restarted.
+   */
+  settingsVersion?: number;
 }) {
   const ai = useAiSearch();
   const { notes, openNote } = useNotes();
+  const { setStatus } = useShell();
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   /** A cited note that is no longer where the answer said it was (R5.6). */
@@ -43,7 +52,7 @@ export function AiSearchPanel({
       // If the settings cannot be read, assume configured rather than showing
       // "set me up" over a working install.
       .catch(() => setConfigured(true));
-  }, []);
+  }, [settingsVersion]);
 
   const open = useCallback(
     (noteId: string, lineStart: number) => {
@@ -69,6 +78,17 @@ export function AiSearchPanel({
     setUnavailable(null);
     void ai.ask();
   }, [ai]);
+
+  // Token usage belongs in the status bar, not as a badge on the answer
+  // (R8.4). Shown for a while, then the status bar goes back to resting.
+  const usage = ai.answer?.usage;
+  useEffect(() => {
+    if (!usage) return;
+    // Kept short: the status cell is narrow, and a truncated number is worse
+    // than a smaller complete one. The in/out split is recorded per request
+    // for Diagnostics.
+    setStatus(`AI: ${usage.totalTokens.toLocaleString()} tokens`, 8000);
+  }, [usage, setStatus]);
 
   if (configured === false) {
     return <AiUnconfigured onOpenSettings={onOpenSettings} what="Answers" />;
