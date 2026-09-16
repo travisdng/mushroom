@@ -101,6 +101,11 @@ pub enum AppError {
     #[error("the search index is not open")]
     IndexNotOpen,
 
+    /// A setting the user typed that will not work. `message` is already the
+    /// sentence shown beside the field.
+    #[error("{message}")]
+    InvalidSetting { message: String },
+
     #[error("internal error")]
     Internal(String),
 }
@@ -344,6 +349,16 @@ impl From<AppError> for AppErrorDto {
                     .to_string(),
                 detail,
                 Some("Wait a moment, or use Tools \u{2192} Rebuild Index."),
+            ),
+
+            // The message is the one written for the field it came from, so
+            // wrapping it in generic prose would only bury it.
+            AppError::InvalidSetting { message } => AppErrorDto::new(
+                "INVALID_SETTING",
+                "That setting cannot be used",
+                message.clone(),
+                detail,
+                None,
             ),
 
             AppError::Internal(_) => AppErrorDto::new(

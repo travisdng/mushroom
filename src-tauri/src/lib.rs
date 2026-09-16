@@ -87,6 +87,13 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::ping,
+            commands::ai::get_ai_settings,
+            commands::ai::get_provider_defaults,
+            commands::ai::set_ai_config,
+            commands::ai::set_ai_key,
+            commands::ai::clear_ai_key,
+            commands::ai::test_ai_connection,
+            commands::ai::list_ai_models,
             commands::config::get_config,
             commands::config::set_ui_state,
             commands::config::set_notes_root,

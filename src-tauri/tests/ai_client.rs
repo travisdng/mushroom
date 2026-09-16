@@ -725,3 +725,36 @@ async fn a_garbled_model_list_is_a_bad_response() {
     let err = client_for(&server).await.list_models().await.unwrap_err();
     assert!(matches!(err, AiError::BadResponse { .. }), "{err:?}");
 }
+
+// --- Containment (R6.3, R7.4) ------------------------------------------
+
+/// The design says all HTTP to an AI service lives in `ai/`. That is only
+/// true while nobody adds a `reqwest` call somewhere convenient, so check it
+/// rather than trusting a doc comment.
+#[test]
+fn nothing_outside_ai_talks_http() {
+    let mut offenders = Vec::new();
+
+    for entry in walkdir::WalkDir::new("src")
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().is_some_and(|x| x == "rs"))
+    {
+        let path = entry.path();
+        // Normalise so the check works on either path separator.
+        let rel = path.to_string_lossy().replace('\\', "/");
+        if rel.starts_with("src/ai/") {
+            continue;
+        }
+
+        let text = std::fs::read_to_string(path).unwrap();
+        if text.contains("reqwest") {
+            offenders.push(rel);
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "HTTP belongs in src/ai/ only; found reqwest in: {offenders:?}"
+    );
+}

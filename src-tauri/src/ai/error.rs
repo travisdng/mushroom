@@ -123,11 +123,13 @@ fn url_host(endpoint: &str) -> String {
         .to_string()
 }
 
-impl From<AiError> for AppErrorDto {
-    fn from(err: AiError) -> Self {
+/// Borrowed, so a caller that still needs the error — to return it after
+/// recording a user-facing copy — does not have to reconstruct it.
+impl From<&AiError> for AppErrorDto {
+    fn from(err: &AiError) -> Self {
         let detail = Some(err.to_string());
 
-        let (code, title, message, hint): (&str, &str, String, Option<String>) = match &err {
+        let (code, title, message, hint): (&str, &str, String, Option<String>) = match err {
             AiError::Unconfigured => (
                 "AI_UNCONFIGURED",
                 "AI is not configured",
@@ -248,6 +250,12 @@ impl From<AiError> for AppErrorDto {
             detail,
             hint,
         }
+    }
+}
+
+impl From<AiError> for AppErrorDto {
+    fn from(err: AiError) -> Self {
+        (&err).into()
     }
 }
 
