@@ -2118,6 +2118,7 @@ dependencies = [
 name = "mushroom"
 version = "0.1.0"
 dependencies = [
+ "dunce",
  "serde",
  "serde_json",
  "tauri",
@@ -2125,9 +2126,11 @@ dependencies = [
  "tauri-plugin-opener",
  "tempfile",
  "thiserror 2.0.20",
+ "time",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "walkdir",
 ]
 
 [[package]]

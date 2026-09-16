@@ -7,6 +7,7 @@ mod commands;
 mod config;
 mod error;
 pub mod logging;
+pub mod notes;
 mod state;
 mod window;
 

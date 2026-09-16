@@ -36,6 +36,19 @@ pub enum AppError {
     #[error("the application data directory could not be determined")]
     NoDataDir,
 
+    #[error("that path is outside the notes folder")]
+    PathOutsideRoot { path: String },
+
+    #[error("that name cannot be used for a file")]
+    InvalidNoteName { name: String },
+
+    #[error("the notes folder is not available")]
+    NotesRootUnavailable {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
     #[error("internal error")]
     Internal(String),
 }
@@ -127,6 +140,37 @@ impl From<AppError> for AppErrorDto {
                 "Windows did not report an application data folder.".to_string(),
                 detail,
                 Some("This is unusual. Check that your user profile is available."),
+            ),
+
+            AppError::PathOutsideRoot { path } => AppErrorDto::new(
+                "PATH_OUTSIDE_ROOT",
+                "That note is outside your notes folder",
+                format!(
+                    "Mushroom only opens notes stored inside your notes folder, \
+                     and {path} is not."
+                ),
+                detail,
+                Some("Use File \u{2192} Import to copy an outside file into your notes."),
+            ),
+
+            AppError::InvalidNoteName { name } => AppErrorDto::new(
+                "INVALID_NOTE_NAME",
+                "That name cannot be used",
+                format!(
+                    "Windows does not allow a file called {name}. Avoid the \
+                     characters < > : \" / \\ | ? * , names ending in a dot or \
+                     space, and reserved names such as CON or NUL."
+                ),
+                detail,
+                Some("Try a different title."),
+            ),
+
+            AppError::NotesRootUnavailable { path, .. } => AppErrorDto::new(
+                "NOTES_ROOT_UNAVAILABLE",
+                "Mushroom cannot reach your notes folder",
+                format!("The folder at {} could not be opened.", path.display()),
+                detail,
+                Some("Check the folder still exists, then choose it again in Settings."),
             ),
 
             AppError::Internal(_) => AppErrorDto::new(

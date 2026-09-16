@@ -1,0 +1,7 @@
+//! Notes: the Markdown files that are the application's reason to exist.
+//!
+//! Markdown on disk is the source of truth. Nothing here may lose or rewrite
+//! what the user typed — see `.kiro/steering/data-integrity.md`.
+
+pub mod model;
+pub mod paths;
