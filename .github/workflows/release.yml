@@ -18,11 +18,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -74,6 +74,8 @@ jobs:
           $body | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "MUSHROOM_EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
+      # Pinned to v0 on purpose: v1 exists, but v0 is what published v0.1.0
+      # successfully. Upgrade deliberately, with a test release, not casually.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
