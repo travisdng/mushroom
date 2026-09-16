@@ -5,9 +5,11 @@
 
 mod commands;
 mod config;
+pub mod database;
 mod error;
 pub mod logging;
 pub mod notes;
+pub mod search;
 mod state;
 mod window;
 

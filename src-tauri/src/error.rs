@@ -75,6 +75,29 @@ pub enum AppError {
     #[error("no notes folder has been chosen")]
     NotesRootMissing,
 
+    #[error("the search index could not be used")]
+    Database {
+        what: String,
+        #[source]
+        source: rusqlite::Error,
+    },
+
+    #[error("this build of SQLite has no full-text search")]
+    Fts5Unavailable {
+        #[source]
+        source: rusqlite::Error,
+    },
+
+    #[error("the search index file could not be replaced")]
+    IndexUnavailable {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("the search index was written by a newer version of Mushroom")]
+    IndexTooNew { found: u32, supported: u32 },
+
     #[error("internal error")]
     Internal(String),
 }
@@ -260,6 +283,54 @@ impl From<AppError> for AppErrorDto {
                 "Choose where your notes should live before creating one.".to_string(),
                 detail,
                 Some("Open Tools \u{2192} Settings to choose a folder."),
+            ),
+
+            AppError::Database { what, .. } => AppErrorDto::new(
+                "DATABASE",
+                "Search is not working",
+                format!(
+                    "Mushroom had a problem with its search index while {what}. \
+                     Your notes are not affected — they are ordinary files, and \
+                     the index is only a cache that can be rebuilt."
+                ),
+                detail,
+                Some("Try Tools \u{2192} Rebuild Index."),
+            ),
+
+            AppError::Fts5Unavailable { .. } => AppErrorDto::new(
+                "FTS5_UNAVAILABLE",
+                "Search is unavailable in this build",
+                "This copy of Mushroom was built without full-text search \
+                 support, so searching cannot work. Notes and editing are \
+                 unaffected."
+                    .to_string(),
+                detail,
+                Some("Reinstall Mushroom from an official build."),
+            ),
+
+            AppError::IndexUnavailable { path, .. } => AppErrorDto::new(
+                "INDEX_UNAVAILABLE",
+                "The search index could not be replaced",
+                format!(
+                    "Mushroom could not move the damaged index at {}.",
+                    path.display()
+                ),
+                detail,
+                Some(
+                    "Close any program using that file, or delete it by hand — it is only a cache.",
+                ),
+            ),
+
+            AppError::IndexTooNew { found, supported } => AppErrorDto::new(
+                "INDEX_TOO_NEW",
+                "This index came from a newer Mushroom",
+                format!(
+                    "The search index is version {found} and this build understands \
+                     version {supported}. Mushroom will not downgrade it, because \
+                     that could lose information."
+                ),
+                detail,
+                Some("Use the newer version, or delete the index file to rebuild it."),
             ),
 
             AppError::Internal(_) => AppErrorDto::new(

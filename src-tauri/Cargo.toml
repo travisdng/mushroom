@@ -29,6 +29,11 @@ walkdir = "2"
 # comparison and display on Windows.
 dunce = "1"
 time = { version = "0.3", features = ["formatting", "parsing", "serde", "macros"] }
+# "bundled" compiles SQLite from source with FTS5 enabled, so the app does not
+# depend on whatever SQLite happens to be on the machine.
+rusqlite = { version = "0.37", features = ["bundled"] }
+pulldown-cmark = { version = "0.13", default-features = false }
+sha2 = "0.10"
 
 [dev-dependencies]
 tempfile = "3"
