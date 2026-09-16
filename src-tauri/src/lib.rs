@@ -3,8 +3,9 @@
 //! Keep this file thin: it wires plugins, managed state, and the command
 //! handler list, and nothing else. See `.kiro/steering/structure.md`.
 
+pub mod ai;
 mod commands;
-mod config;
+pub mod config;
 pub mod database;
 mod error;
 pub mod logging;

@@ -34,10 +34,22 @@ time = { version = "0.3", features = ["formatting", "parsing", "serde", "macros"
 rusqlite = { version = "0.37", features = ["bundled"] }
 pulldown-cmark = { version = "0.13", default-features = false }
 sha2 = "0.10"
+# rustls rather than native-tls: one TLS stack, no OpenSSL or schannel
+# surprises, and the same behaviour on every machine.
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+async-trait = "0.1"
+tokio = { version = "1", features = ["sync", "time", "rt"] }
+tokio-util = "0.7"
+# Windows Credential Manager, so the API key never lands in a file.
+keyring = { version = "3", features = ["windows-native"] }
 
 [dev-dependencies]
 tempfile = "3"
 walkdir = "2"
+# A local HTTP server, so no test ever contacts a real AI provider.
+wiremock = "0.6"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 # Read the optimization guideline for more details:
 # https://tauri.app/concept/size/#cargo-configuration
