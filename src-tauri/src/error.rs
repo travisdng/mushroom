@@ -49,6 +49,23 @@ pub enum AppError {
         source: std::io::Error,
     },
 
+    #[error("the note could not be read")]
+    NoteRead {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("the note could not be written")]
+    NoteWrite {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("the file is not text Mushroom can edit")]
+    NoteNotText { path: PathBuf },
+
     #[error("internal error")]
     Internal(String),
 }
@@ -171,6 +188,38 @@ impl From<AppError> for AppErrorDto {
                 format!("The folder at {} could not be opened.", path.display()),
                 detail,
                 Some("Check the folder still exists, then choose it again in Settings."),
+            ),
+
+            AppError::NoteRead { path, .. } => AppErrorDto::new(
+                "NOTE_READ",
+                "Mushroom could not open that note",
+                format!("The file at {} could not be read.", path.display()),
+                detail,
+                Some("Check the file still exists and is not open in another program."),
+            ),
+
+            AppError::NoteWrite { path, .. } => AppErrorDto::new(
+                "NOTE_WRITE",
+                "Mushroom could not save that note",
+                format!(
+                    "The file at {} could not be written. Your changes are still \
+                     in the editor.",
+                    path.display()
+                ),
+                detail,
+                Some("Check the disk is not full and the file is not read-only."),
+            ),
+
+            AppError::NoteNotText { path } => AppErrorDto::new(
+                "NOTE_NOT_TEXT",
+                "That file is not editable text",
+                format!(
+                    "{} is not valid UTF-8 text, so Mushroom will not open it for \
+                     editing — saving would corrupt it.",
+                    path.display()
+                ),
+                detail,
+                Some("Open it in a program that understands its format."),
             ),
 
             AppError::Internal(_) => AppErrorDto::new(
