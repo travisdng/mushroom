@@ -153,6 +153,9 @@ pub struct AppConfig {
     pub ai: AiConfig,
     /// The last 20 questions asked, most recent first (R8.1).
     pub ai_history: Vec<String>,
+    /// The last 20 notes opened, most recent first. Quick Open ranks by it, so
+    /// the note you just had is one keystroke away.
+    pub recent_notes: Vec<String>,
 }
 
 impl Default for AppConfig {
@@ -163,6 +166,7 @@ impl Default for AppConfig {
             notes_root: None,
             ai: AiConfig::default(),
             ai_history: Vec::new(),
+            recent_notes: Vec::new(),
         }
     }
 }

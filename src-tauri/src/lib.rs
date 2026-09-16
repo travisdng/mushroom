@@ -99,6 +99,7 @@ pub fn run() {
             commands::config::get_config,
             commands::config::set_ui_state,
             commands::config::set_notes_root,
+            commands::config::record_recent_note,
             commands::notes::list_notes,
             commands::notes::get_folder_tree,
             commands::notes::read_note,

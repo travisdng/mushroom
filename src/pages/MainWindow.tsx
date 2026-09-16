@@ -22,6 +22,7 @@ import { EditorPane } from "../components/editor/EditorPane";
 import { SearchPanel } from "../components/search/SearchPanel";
 import { RebuildDialog } from "../components/search/RebuildDialog";
 import { SettingsDialog } from "../components/settings/SettingsDialog";
+import { QuickOpenDialog } from "../components/notebook/QuickOpenDialog";
 import { AiSearchPanel } from "../components/ai/AiSearchPanel";
 import type { ViewMode } from "../components/editor/EditorPane";
 import { useShell, NOT_AVAILABLE } from "../hooks/useShell";
@@ -44,6 +45,7 @@ type DialogKind =
   | { kind: "delete-note"; id: string; title: string }
   | { kind: "rebuild" }
   | { kind: "settings" }
+  | { kind: "quick-open" }
   | null;
 
 export default function MainWindow() {
@@ -124,6 +126,7 @@ export default function MainWindow() {
       "Ctrl+N": newNote,
       "Ctrl+S": () => void save(),
       "Ctrl+F": () => showSearch(),
+      "Ctrl+P": () => setDialog({ kind: "quick-open" }),
       "Ctrl+Shift+F": () => togglePanel("ai"),
       "Ctrl+Shift+P": () => setMode((m) => (m === "preview" ? "edit" : "preview")),
       F1: () => setDialog({ kind: "shortcuts" }),
@@ -185,6 +188,13 @@ export default function MainWindow() {
       mnemonic: "F",
       items: [
         { type: "item", label: "New Note", mnemonic: "N", accel: "Ctrl+N", onSelect: newNote },
+        {
+          type: "item",
+          label: "Quick Open…",
+          mnemonic: "Q",
+          accel: "Ctrl+P",
+          onSelect: () => setDialog({ kind: "quick-open" }),
+        },
         { type: "item", label: "Open…", mnemonic: "O", accel: "Ctrl+O" },
         {
           type: "item",
@@ -377,6 +387,14 @@ export default function MainWindow() {
 
       <StatusBar />
 
+      {dialog?.kind === "quick-open" ? (
+        <QuickOpenDialog
+          notes={notes.notes}
+          recent={notes.recent}
+          onOpen={(id) => void notes.openNote(id)}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       {dialog?.kind === "settings" ? (
         <SettingsDialog
           onClose={() => {

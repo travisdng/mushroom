@@ -19,27 +19,60 @@ fn is_plausible(rect: &WindowRect) -> bool {
     (MIN_DIM..=MAX_DIM).contains(&rect.width) && (MIN_DIM..=MAX_DIM).contains(&rect.height)
 }
 
-/// True when any part of `rect` overlaps a monitor that currently exists.
+/// How much of the window has to be reachable for the rect to be usable.
 ///
-/// Guards against the classic case: the window was last closed on a second
-/// monitor that has since been unplugged.
+/// The title bar is the only way to drag a window back with a mouse, so a
+/// window whose top edge sits above the screen cannot be recovered without the
+/// keyboard. Windows itself will not let you drag a window up there; a saved
+/// rect should not be able to put it there either.
+const TITLE_BAR_HEIGHT: i32 = 32;
+/// Enough of the title bar to actually grab.
+const GRABBABLE_WIDTH: i32 = 120;
+
+/// True when the window would be both visible and reachable.
+///
+/// Guards two cases: the window was last closed on a second monitor that has
+/// since been unplugged, and the window's title bar would land off the top of
+/// the screen where it cannot be dragged.
 fn is_on_screen(window: &WebviewWindow, rect: &WindowRect) -> bool {
     let Ok(monitors) = window.available_monitors() else {
         return false;
     };
 
-    let (wx1, wy1) = (rect.x, rect.y);
-    let wx2 = rect.x + rect.width as i32;
-    let wy2 = rect.y + rect.height as i32;
+    let bounds: Vec<(i32, i32, i32, i32)> = monitors
+        .iter()
+        .map(|monitor| {
+            let pos = monitor.position();
+            let size = monitor.size();
+            (
+                pos.x,
+                pos.y,
+                pos.x + size.width as i32,
+                pos.y + size.height as i32,
+            )
+        })
+        .collect();
 
-    monitors.iter().any(|monitor| {
-        let pos = monitor.position();
-        let size = monitor.size();
-        let (mx1, my1) = (pos.x, pos.y);
-        let mx2 = pos.x + size.width as i32;
-        let my2 = pos.y + size.height as i32;
+    is_reachable(rect, &bounds)
+}
 
-        wx1 < mx2 && wx2 > mx1 && wy1 < my2 && wy2 > my1
+/// The geometry half of [`is_on_screen`], split out so it can be tested
+/// without a window or a monitor.
+fn is_reachable(rect: &WindowRect, monitors: &[(i32, i32, i32, i32)]) -> bool {
+    // The strip a person can actually grab: the title bar.
+    let bar_left = rect.x;
+    let bar_right = rect.x + rect.width as i32;
+    let bar_top = rect.y;
+    let bar_bottom = rect.y + TITLE_BAR_HEIGHT;
+
+    monitors.iter().any(|&(mx1, my1, mx2, my2)| {
+        // The title bar must not be above the monitor's top edge…
+        if bar_top < my1 {
+            return false;
+        }
+        // …and enough of it must be within the monitor to click.
+        let overlap = bar_right.min(mx2) - bar_left.max(mx1);
+        overlap >= GRABBABLE_WIDTH && bar_top < my2 && bar_bottom > my1
     })
 }
 
@@ -188,6 +221,123 @@ mod tests {
     fn accepts_ordinary_window_sizes() {
         assert!(is_plausible(&rect(1100, 720)));
         assert!(is_plausible(&rect(800, 560)));
+    }
+
+    /// One 1920x1080 monitor at the origin.
+    const PRIMARY: [(i32, i32, i32, i32); 1] = [(0, 0, 1920, 1080)];
+
+    #[test]
+    fn an_ordinary_position_is_reachable() {
+        assert!(is_reachable(
+            &WindowRect {
+                x: 100,
+                y: 100,
+                width: 1100,
+                height: 720
+            },
+            &PRIMARY
+        ));
+        // Flush to the top-left corner is fine.
+        assert!(is_reachable(
+            &WindowRect {
+                x: 0,
+                y: 0,
+                width: 1100,
+                height: 720
+            },
+            &PRIMARY
+        ));
+    }
+
+    #[test]
+    fn a_title_bar_above_the_screen_is_refused() {
+        // Observed for real: a rect with y = -44 was persisted. The window
+        // overlaps the monitor, so an overlap-only check restores it — and the
+        // title bar is then unreachable with a mouse.
+        assert!(!is_reachable(
+            &WindowRect {
+                x: 124,
+                y: -44,
+                width: 1650,
+                height: 1050
+            },
+            &PRIMARY
+        ));
+        assert!(!is_reachable(
+            &WindowRect {
+                x: 100,
+                y: -1,
+                width: 1100,
+                height: 720
+            },
+            &PRIMARY
+        ));
+    }
+
+    #[test]
+    fn a_window_dragged_mostly_off_the_side_is_refused() {
+        // Only a sliver of title bar left to grab.
+        assert!(!is_reachable(
+            &WindowRect {
+                x: 1880,
+                y: 100,
+                width: 1100,
+                height: 720
+            },
+            &PRIMARY
+        ));
+        assert!(!is_reachable(
+            &WindowRect {
+                x: -1040,
+                y: 100,
+                width: 1100,
+                height: 720
+            },
+            &PRIMARY
+        ));
+    }
+
+    #[test]
+    fn a_window_below_the_screen_is_refused() {
+        assert!(!is_reachable(
+            &WindowRect {
+                x: 100,
+                y: 1080,
+                width: 1100,
+                height: 720
+            },
+            &PRIMARY
+        ));
+    }
+
+    #[test]
+    fn a_second_monitor_above_the_primary_is_still_valid() {
+        // A monitor arranged above the primary has negative coordinates, and a
+        // window there is perfectly reachable. The rule is about the monitor's
+        // own top edge, not about zero.
+        let monitors = [(0, 0, 1920, 1080), (0, -1080, 1920, 0)];
+        assert!(is_reachable(
+            &WindowRect {
+                x: 100,
+                y: -1000,
+                width: 1100,
+                height: 720
+            },
+            &monitors
+        ));
+    }
+
+    #[test]
+    fn an_unplugged_second_monitor_is_refused() {
+        assert!(!is_reachable(
+            &WindowRect {
+                x: 2200,
+                y: 100,
+                width: 1100,
+                height: 720
+            },
+            &PRIMARY
+        ));
     }
 
     #[test]

@@ -28,6 +28,30 @@ pub fn set_ui_state(state: tauri::State<'_, AppState>, ui: UiState) -> Result<()
     Ok(())
 }
 
+/// Note ids kept for Quick Open's recency ranking.
+const RECENT_LIMIT: usize = 20;
+
+/// Record that a note was opened, most recent first, without duplicates.
+///
+/// Best effort: failing to remember which note you opened must never stop you
+/// opening it.
+#[tauri::command]
+pub fn record_recent_note(state: tauri::State<'_, AppState>, id: String) {
+    let snapshot = {
+        let Ok(mut config) = state.config.lock() else {
+            return;
+        };
+        config.recent_notes.retain(|existing| existing != &id);
+        config.recent_notes.insert(0, id);
+        config.recent_notes.truncate(RECENT_LIMIT);
+        config.clone()
+    };
+
+    if let Err(err) = save(&state.data_dir, &snapshot) {
+        tracing::debug!(target: "app", error = %err, "recent notes could not be saved");
+    }
+}
+
 /// Change the notes folder, then re-scan it.
 ///
 /// Validates before accepting: pointing Mushroom at a folder it cannot write

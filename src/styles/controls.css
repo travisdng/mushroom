@@ -275,3 +275,51 @@ textarea.field {
 .groupbox > legend {
   padding: 0 4px;
 }
+
+/* ------------------------------------------------------------ Quick Open */
+
+.quick-open__list {
+  margin-top: 4px;
+  height: 200px;
+  overflow: auto;
+  background: var(--field-bg);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+.quick-open__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 1px 4px;
+  height: 18px;
+  cursor: default;
+}
+
+.quick-open__row[data-active="true"] {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.quick-open__title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-open__folder {
+  flex: none;
+  color: var(--text-disabled);
+}
+
+.quick-open__row[data-active="true"] .quick-open__folder {
+  color: var(--text-disabled-highlight);
+}
+
+.quick-open__empty {
+  padding: 6px;
+  color: var(--text-disabled);
+}

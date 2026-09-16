@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import * as configService from "../services/configService";
 import * as notesService from "../services/notesService";
 import { inDesktopApp } from "../services/ipc";
 import type {
@@ -50,6 +51,8 @@ type NotesApi = {
 
   selectFolder: (folder: string | null) => void;
   openNote: (id: string, line?: number) => Promise<void>;
+  /** Note ids in most-recently-opened order, for Quick Open. */
+  recent: string[];
   setBody: (value: string) => void;
   save: () => Promise<void>;
   createNote: (folder: string, title: string) => Promise<NoteMeta | null>;
@@ -73,6 +76,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [tree, setTree] = useState<FolderNode | null>(null);
   const [notes, setNotes] = useState<NoteMeta[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  /** Note ids in most-recently-opened order, for Quick Open. */
+  const [recent, setRecent] = useState<string[]>([]);
   const [open, setOpen] = useState<NoteContent | null>(null);
   const [body, setBodyState] = useState("");
   const [dirty, setDirty] = useState(false);
@@ -197,6 +202,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setBodyState(content.body);
         setDirty(false);
         setPendingLine(line ?? null);
+
+        // Remember it for Quick Open. Best effort — and after the open
+        // succeeded, so a note that failed to read is not offered as recent.
+        setRecent((current) => [id, ...current.filter((x) => x !== id)].slice(0, 20));
+        void configService.recordRecentNote(id).catch(() => {});
       } catch (e) {
         reportError(e);
       }
@@ -373,6 +383,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       conflict,
       selectFolder,
       openNote,
+      recent,
       setBody,
       save,
       createNote,
@@ -402,6 +413,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       pendingLine,
       selectFolder,
       openNote,
+      recent,
       setBody,
       save,
       createNote,

@@ -26,4 +26,7 @@ export type AppConfig = {
   /** Null until first run resolves the default. */
   notesRoot: string | null;
   ai: AiConfig;
+  aiHistory: string[];
+  /** The last 20 notes opened, most recent first. */
+  recentNotes: string[];
 };
