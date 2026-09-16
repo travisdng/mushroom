@@ -8,6 +8,7 @@ mod config;
 mod error;
 pub mod logging;
 mod state;
+mod window;
 
 use tauri::Manager;
 
@@ -49,8 +50,21 @@ pub fn run() {
                 tracing::warn!(target: "app", error = %err, "settings could not be loaded");
             }
 
+            let saved_rect = config.ui.window.clone();
             app.manage(AppState::new(data_dir, config));
+
+            if let Some(main) = app.get_webview_window("main") {
+                window::restore(&main, saved_rect.as_ref());
+            }
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                if let Some(main) = window.app_handle().get_webview_window("main") {
+                    window::persist(&main);
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::ping,
