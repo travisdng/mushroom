@@ -104,12 +104,21 @@ pub fn extract(source: &str) -> Extracted {
                         .join(" > ");
 
                     // The heading itself is searchable text of its section.
+                    // The trailing break matters: without it the heading runs
+                    // into the first word of the body ("NotesSomething"),
+                    // which FTS5 then indexes as a single unsearchable token.
                     sections.push((
                         path,
-                        vec![Piece {
-                            text: heading_text.trim().to_string(),
-                            line: heading_line,
-                        }],
+                        vec![
+                            Piece {
+                                text: heading_text.trim().to_string(),
+                                line: heading_line,
+                            },
+                            Piece {
+                                text: "\n".to_string(),
+                                line: heading_line,
+                            },
+                        ],
                     ));
                 }
             }
@@ -356,6 +365,25 @@ Also enough words here to make this section a passage of its very own.
 
         // "# Two" is on line 5 of the source.
         assert_eq!(two.line_start, 5, "got {:?}", two);
+    }
+
+    #[test]
+    fn a_heading_does_not_run_into_the_body_text() {
+        // Regression: "# Notes" followed by "Something..." produced the single
+        // token "NotesSomething", so searching for either word missed it.
+        let out = extract(
+            "# Notes
+
+Something entirely unrelated is written here.
+",
+        );
+        let text = &out.passages[0].text;
+
+        assert!(
+            !text.contains("NotesSomething"),
+            "heading glued to body: {text}"
+        );
+        assert!(text.contains("Notes Something"), "got {text}");
     }
 
     #[test]
