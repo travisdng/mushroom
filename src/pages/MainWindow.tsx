@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { MenuBar } from "../components/chrome/MenuBar";
 import type { MenuDef } from "../components/chrome/MenuBar";
 import { Toolbar } from "../components/chrome/Toolbar";
@@ -26,15 +26,26 @@ export default function MainWindow() {
   const workAreaRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  const notAvailable = useCallback(() => {
-    shell.setStatus(NOT_AVAILABLE, 2000);
-  }, [shell]);
+  // Depend on setStatus rather than the whole shell: setStatus is stable, so
+  // this callback is too, and the keydown listener is not re-registered every
+  // time the status text or a panel size changes.
+  const setStatus = shell.setStatus;
+  const togglePanel = shell.togglePanel;
 
-  useShortcuts(notAvailable, {
-    "Ctrl+Shift+F": () => shell.togglePanel("ai"),
-    F1: () => setDialog("shortcuts"),
-    Escape: () => setDialog(null),
-  });
+  const notAvailable = useCallback(() => {
+    setStatus(NOT_AVAILABLE, 2000);
+  }, [setStatus]);
+
+  const shortcutHandlers = useMemo(
+    () => ({
+      "Ctrl+Shift+F": () => togglePanel("ai"),
+      F1: () => setDialog("shortcuts"),
+      Escape: () => setDialog(null),
+    }),
+    [togglePanel],
+  );
+
+  useShortcuts(notAvailable, shortcutHandlers);
 
   const exit = useCallback(async () => {
     try {

@@ -43,8 +43,20 @@ fn is_on_screen(window: &WebviewWindow, rect: &WindowRect) -> bool {
     })
 }
 
-/// Apply a saved rect, or centre the window if it would land off-screen.
-pub fn restore(window: &WebviewWindow, rect: Option<&WindowRect>) {
+/// Apply a saved rect, or centre the window if it would land off-screen, then
+/// re-maximise if it was closed maximised.
+pub fn restore(window: &WebviewWindow, rect: Option<&WindowRect>, maximized: bool) {
+    // Set the normal-state geometry first, then maximise. Doing it in this
+    // order means un-maximising returns to the saved size rather than to
+    // whatever default the window was created with.
+    place(window, rect);
+
+    if maximized {
+        let _ = window.maximize();
+    }
+}
+
+fn place(window: &WebviewWindow, rect: Option<&WindowRect>) {
     let Some(rect) = rect else {
         let _ = window.center();
         return;
@@ -80,9 +92,20 @@ pub fn restore(window: &WebviewWindow, rect: Option<&WindowRect>) {
 /// often than they close one, and a crash losing the last position is a
 /// non-event.
 pub fn persist(window: &WebviewWindow) {
-    // A maximised or minimised window would otherwise save its restored-state
-    // rect as though it were the normal one.
+    // A minimised window reports the geometry of the minimised state, which is
+    // useless to restore.
     if window.is_minimized().unwrap_or(false) {
+        return;
+    }
+
+    let maximized = window.is_maximized().unwrap_or(false);
+
+    if maximized {
+        // A maximised window reports the screen-filling rect. Saving that would
+        // reopen a window that fills the screen without being maximised, and
+        // un-maximising would do nothing visible. Keep whatever normal-state
+        // rect we already had and just record that it was maximised.
+        set_maximized_flag(window, true);
         return;
     }
 
@@ -120,11 +143,31 @@ pub fn persist(window: &WebviewWindow) {
             return;
         };
         config.ui.window = Some(rect);
+        config.ui.maximized = false;
         config.clone()
     };
 
     if let Err(err) = save(&state.data_dir, &snapshot) {
         tracing::warn!(target: "app", error = %err, "window geometry could not be saved");
+    }
+}
+
+/// Record only the maximised flag, leaving the stored normal-state rect alone.
+fn set_maximized_flag(window: &WebviewWindow, maximized: bool) {
+    let Some(state) = window.app_handle().try_state::<AppState>() else {
+        return;
+    };
+
+    let snapshot = {
+        let Ok(mut config) = state.config.lock() else {
+            return;
+        };
+        config.ui.maximized = maximized;
+        config.clone()
+    };
+
+    if let Err(err) = save(&state.data_dir, &snapshot) {
+        tracing::warn!(target: "app", error = %err, "window state could not be saved");
     }
 }
 

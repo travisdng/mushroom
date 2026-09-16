@@ -25,6 +25,9 @@ pub struct WindowRect {
 #[serde(rename_all = "camelCase", default)]
 pub struct UiState {
     pub window: Option<WindowRect>,
+    /// Reopen maximised. `window` keeps the restored-state rect so that
+    /// un-maximising returns to a sensible size rather than filling the screen.
+    pub maximized: bool,
     pub sidebar_width: u32,
     pub notebook_height: u32,
     pub ai_width: u32,
@@ -38,6 +41,7 @@ impl Default for UiState {
     fn default() -> Self {
         Self {
             window: None,
+            maximized: false,
             sidebar_width: 240,
             notebook_height: 220,
             ai_width: 320,

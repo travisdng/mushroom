@@ -10,7 +10,22 @@ dated version section and write the matching file in
 
 ## [Unreleased]
 
-Nothing yet — v0.1.0 is the current tip.
+### Added
+- CI workflow running the same `npm run check` gate on every push and pull
+  request, and a release workflow that builds both installers from a `v*` tag
+  and publishes them to a GitHub release.
+
+### Changed
+- `npm run check` now runs the real `vite build` rather than `tsc --noEmit`,
+  so the gate catches build-time failures that typechecking alone misses.
+- Keyboard shortcut handlers are memoised, so the global keydown listener is
+  registered once instead of on every render.
+
+### Fixed
+- A window closed while maximised reopened screen-sized but not maximised, and
+  un-maximising did nothing visible. The maximised state is now stored
+  separately and the normal-state size is preserved, so un-maximising returns
+  to the size you last used.
 
 ## [0.1.0] — 2026-09-16
 

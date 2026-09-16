@@ -51,10 +51,11 @@ pub fn run() {
             }
 
             let saved_rect = config.ui.window.clone();
+            let saved_maximized = config.ui.maximized;
             app.manage(AppState::new(data_dir, config));
 
             if let Some(main) = app.get_webview_window("main") {
-                window::restore(&main, saved_rect.as_ref());
+                window::restore(&main, saved_rect.as_ref(), saved_maximized);
             }
 
             Ok(())
