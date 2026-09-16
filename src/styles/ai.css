@@ -1,0 +1,314 @@
+/* ------------------------------------------------------------ AI Search */
+
+/* A grey utility panel, not a chat window. No bubbles, no avatars, no
+   gradients, no rounded cards — see .kiro/steering/ui-retro.md. */
+
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.ai-panel__ask {
+  flex: none;
+  padding: 4px;
+  border-bottom: 1px solid var(--bevel-shadow);
+}
+
+.ai-panel__ask textarea {
+  resize: none;
+  font-family: var(--font-ui);
+}
+
+.ai-panel__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.ai-panel__history {
+  position: relative;
+  display: flex;
+}
+
+.ai-panel__history-toggle {
+  min-width: 18px;
+  padding: 0 2px;
+}
+
+.ai-panel__history-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 260px;
+  overflow: auto;
+  background: var(--surface);
+  border-top: 1px solid var(--bevel-light);
+  border-left: 1px solid var(--bevel-light);
+  border-right: 1px solid var(--bevel-dark);
+  border-bottom: 1px solid var(--bevel-dark);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-face);
+  padding: 2px;
+}
+
+.ai-panel__history-menu .menuitem__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+}
+
+.ai-panel__result {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px;
+}
+
+.ai-panel__error {
+  margin: 4px 0;
+  padding: 4px 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--bevel-shadow);
+  border-right-color: var(--bevel-light);
+  border-bottom-color: var(--bevel-light);
+}
+
+.ai-panel__error-title {
+  font-weight: bold;
+}
+
+.ai-panel__error-hint {
+  margin-top: 3px;
+  color: var(--text-disabled);
+}
+
+/* ------------------------------------------------------- Retrieved notes */
+
+.retrieved {
+  margin-bottom: 6px;
+}
+
+.retrieved__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.retrieved__label,
+.retrieved__title,
+.sources__title {
+  color: var(--text);
+}
+
+.retrieved__title,
+.sources__title {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.retrieved__list,
+.sources__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.retrieved__list li,
+.sources__list li {
+  margin-bottom: 3px;
+}
+
+.retrieved__link,
+.sources__link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--selection-bg);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.retrieved__link:focus-visible,
+.sources__link:focus-visible,
+.citation:focus-visible {
+  outline: 1px dotted var(--text);
+  outline-offset: 1px;
+}
+
+.retrieved__folder,
+.sources__folder {
+  color: var(--text-disabled);
+}
+
+/* A classic segmented indeterminate bar, not a spinner. */
+.progress {
+  height: 14px;
+  padding: 1px;
+  background: var(--field-bg);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.progress--indeterminate span {
+  flex: none;
+  width: 10px;
+  background: var(--selection-bg);
+  animation: mushroom-march 1.2s linear infinite;
+  opacity: 0;
+}
+
+.progress--indeterminate span:nth-child(1) { animation-delay: 0s; }
+.progress--indeterminate span:nth-child(2) { animation-delay: 0.1s; }
+.progress--indeterminate span:nth-child(3) { animation-delay: 0.2s; }
+.progress--indeterminate span:nth-child(4) { animation-delay: 0.3s; }
+.progress--indeterminate span:nth-child(5) { animation-delay: 0.4s; }
+.progress--indeterminate span:nth-child(6) { animation-delay: 0.5s; }
+
+@keyframes mushroom-march {
+  0%, 60%, 100% { opacity: 0; }
+  20%, 40% { opacity: 1; }
+}
+
+/* ---------------------------------------------------------------- Answer */
+
+.answer {
+  margin-bottom: 6px;
+}
+
+/* Stated plainly, not shouted. Nothing has gone wrong — the answer simply
+   has not been shown to come from the notes. */
+.answer__header,
+.answer__warning,
+.answer__incomplete {
+  padding: 3px 6px;
+  margin-bottom: 4px;
+  background: var(--surface-alt);
+  border-left: 3px solid var(--bevel-shadow);
+}
+
+.answer__warning {
+  border-left-color: #800000;
+  color: #800000;
+}
+
+.answer__body {
+  line-height: 1.45;
+}
+
+.answer__body p {
+  margin: 0 0 8px;
+}
+
+.answer__body ul,
+.answer__body ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+/* The user's own words, quoted back. Visually distinct from model prose. */
+.answer__body blockquote {
+  margin: 0 0 8px;
+  padding: 2px 6px;
+  border-left: 3px solid var(--bevel-shadow);
+  background: var(--surface-alt);
+}
+
+.answer__body code {
+  font-family: var(--font-mono);
+  background: var(--surface-alt);
+}
+
+.answer__streaming {
+  white-space: pre-wrap;
+}
+
+/* The one animation this milestone allows. */
+.answer__caret {
+  animation: mushroom-blink 1s step-end infinite;
+}
+
+@keyframes mushroom-blink {
+  50% { opacity: 0; }
+}
+
+.answer__footer {
+  margin-top: 6px;
+  padding-top: 3px;
+  border-top: 1px solid var(--bevel-shadow);
+  color: var(--text-disabled);
+}
+
+.citation {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--selection-bg);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.citation--unmatched {
+  color: #800000;
+  cursor: default;
+  text-decoration: line-through;
+}
+
+/* --------------------------------------------------------------- Sources */
+
+.sources {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--bevel-shadow);
+}
+
+/* The excerpt exactly as it was sent, so the model can be checked against it. */
+.sources__excerpt {
+  margin: 2px 0 0 12px;
+  padding: 2px 4px;
+  color: var(--text-disabled);
+  background: var(--surface-alt);
+  border-left: 2px solid var(--bevel-shadow);
+  max-height: 70px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.sources__also {
+  margin-top: 6px;
+}
+
+.sources__toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answer__caret,
+  .progress--indeterminate span {
+    animation: none;
+  }
+  .progress--indeterminate span {
+    opacity: 1;
+  }
+}

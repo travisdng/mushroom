@@ -22,6 +22,7 @@ import { EditorPane } from "../components/editor/EditorPane";
 import { SearchPanel } from "../components/search/SearchPanel";
 import { RebuildDialog } from "../components/search/RebuildDialog";
 import { SettingsDialog } from "../components/settings/SettingsDialog";
+import { AiSearchPanel } from "../components/ai/AiSearchPanel";
 import type { ViewMode } from "../components/editor/EditorPane";
 import { useShell, NOT_AVAILABLE } from "../hooks/useShell";
 import { useNotes } from "../hooks/useNotes";
@@ -362,7 +363,7 @@ export default function MainWindow() {
             <Splitter orientation="vertical" onDrag={dragAi} label="Resize AI panel" />
             <div className="ai-pane" style={{ width: aiWidth }}>
               <Panel title="AI Search" flat>
-                <EmptyState text="AI search arrives in a later release." />
+                <AiSearchPanel onOpenSettings={() => setDialog({ kind: "settings" })} />
               </Panel>
             </div>
           </>

@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, Ref, TextareaHTMLAttributes } from "react";
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
@@ -35,10 +35,13 @@ export function Field({ label, error, className, id, ...rest }: FieldProps) {
   );
 }
 
-type TextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
+type TextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  /** React 19 passes `ref` as an ordinary prop; declare it so callers can focus. */
+  ref?: Ref<HTMLTextAreaElement>;
+};
 
-export function TextArea({ className, ...rest }: TextAreaProps) {
+export function TextArea({ className, ref, ...rest }: TextAreaProps) {
   const classes = ["field"];
   if (className) classes.push(className);
-  return <textarea className={classes.join(" ")} {...rest} />;
+  return <textarea ref={ref} className={classes.join(" ")} {...rest} />;
 }
