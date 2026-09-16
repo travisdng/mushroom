@@ -312,9 +312,7 @@ A deeper section with enough words in it to survive the minimum length rule.
         assert!(paths.contains(&"AI AutoQA"), "{paths:?}");
         assert!(paths.contains(&"AI AutoQA > Root cause"), "{paths:?}");
         assert!(
-            paths
-                .iter()
-                .any(|p| *p == "AI AutoQA > Root cause > Detail"),
+            paths.contains(&"AI AutoQA > Root cause > Detail"),
             "{paths:?}"
         );
     }
