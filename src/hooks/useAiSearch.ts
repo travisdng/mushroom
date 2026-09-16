@@ -58,6 +58,15 @@ export function useAiSearch(): AiSearchApi {
   const currentId = useRef<string | null>(null);
   /** Set when the user pressed Stop, to tell cancellation from failure. */
   const stopped = useRef(false);
+  /**
+   * Whether any text arrived for the current request.
+   *
+   * A ref, not the `text` state: the catch below runs in a closure created
+   * when the question was asked, where `text` was still empty — so reading the
+   * state there always said "nothing arrived" and a broken-off answer was
+   * never marked incomplete.
+   */
+  const receivedText = useRef(false);
 
   useEffect(() => {
     if (!inDesktopApp()) return;
@@ -77,6 +86,7 @@ export function useAiSearch(): AiSearchApi {
       const id = newRequestId();
       currentId.current = id;
       stopped.current = false;
+      receivedText.current = false;
 
       setStage("retrieving");
       setText("");
@@ -102,6 +112,7 @@ export function useAiSearch(): AiSearchApi {
             setStage("asking");
             break;
           case "text":
+            receivedText.current = true;
             setStage("streaming");
             setText((current) => current + delta.delta);
             break;
@@ -139,11 +150,11 @@ export function useAiSearch(): AiSearchApi {
           setError(toAppError(raw));
           setStage("error");
           // Text already on screen stays; it is real, just unfinished.
-          setIncomplete((had) => had || text.length > 0);
+          setIncomplete(receivedText.current);
         }
       }
     },
-    [busy, question, text.length],
+    [busy, question],
   );
 
   const stop = useCallback(async () => {

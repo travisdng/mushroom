@@ -162,15 +162,23 @@ impl AiSearchService {
         });
 
         let response = if config.stream {
+            let mut delivered = 0usize;
             match self
-                .stream_answer(request.clone(), &mut sink, &cancel)
+                .stream_answer(request.clone(), &mut sink, &cancel, &mut delivered)
                 .await
             {
                 Ok(response) => Ok(response),
                 // A provider that does not implement streaming rejects the
-                // request outright. One silent retry without it beats telling
-                // the user their endpoint is broken when it simply differs.
-                Err(err) if rejects_streaming(&err) => {
+                // request outright, before any text arrives. One silent retry
+                // without streaming beats telling the user their endpoint is
+                // broken when it simply differs.
+                //
+                // `delivered == 0` is the whole distinction. A failure *after*
+                // text has arrived proves streaming works and the network
+                // broke — re-asking would throw away the partial answer the
+                // user can already see, pay for the whole thing twice, and
+                // hide a real fault.
+                Err(err) if delivered == 0 && rejects_streaming(&err) => {
                     tracing::info!(
                         target: "ai",
                         "the service refused a streamed request; retrying without streaming"
@@ -244,11 +252,15 @@ impl AiSearchService {
     }
 
     /// Stream the answer, forwarding each delta as it arrives.
+    ///
+    /// `delivered` counts the pieces actually emitted, so the caller can tell
+    /// "this service will not stream" from "the stream broke part-way".
     async fn stream_answer(
         &self,
         request: ChatRequest,
         sink: &mut DeltaSink,
         cancel: &CancellationToken,
+        delivered: &mut usize,
     ) -> Result<crate::ai::provider::ChatResponse, AiError> {
         // The sink is borrowed here but must be moved into the streaming
         // closure, so the text comes back through a channel we own.
@@ -266,11 +278,15 @@ impl AiSearchService {
 
         loop {
             tokio::select! {
-                Some(delta) = rx.recv() => sink(AiDelta::Text { delta }),
+                Some(delta) = rx.recv() => {
+                    *delivered += 1;
+                    sink(AiDelta::Text { delta });
+                }
                 result = &mut stream => {
                     // Drain anything produced since the last poll, so no
                     // trailing text is lost.
                     while let Ok(delta) = rx.try_recv() {
+                        *delivered += 1;
                         sink(AiDelta::Text { delta });
                     }
                     break result;

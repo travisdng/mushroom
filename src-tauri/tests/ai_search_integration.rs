@@ -610,3 +610,66 @@ async fn stopping_is_not_reported_as_a_failure() {
         Some("retrieved")
     );
 }
+
+#[tokio::test]
+async fn a_stream_that_breaks_part_way_is_not_retried_as_a_whole_answer() {
+    // The fallback exists for a provider that refuses `stream: true` outright.
+    // A connection that dies *after* text has arrived is a different thing:
+    // re-asking discards the partial answer the user can already see, pays for
+    // the whole thing twice, and hides a real network fault.
+    let (_dir, root, db) = corpus();
+    let server = MockServer::start().await;
+
+    // A stream that stops mid-answer: deltas, then nothing, no [DONE].
+    let truncated = "data: {\"choices\":[{\"delta\":{\"content\":\"half an ans\"}}]}\n\n\
+                     data: {\"choices\":[{\"delta\":{\"cont";
+
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .and(wiremock::matchers::body_string_contains("\"stream\":true"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "text/event-stream")
+                .set_body_string(truncated),
+        )
+        .with_priority(1)
+        .mount(&server)
+        .await;
+    // If the fallback fires, this is what it would get — a different answer,
+    // which makes the mistake visible rather than silently plausible.
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(whole_answer("REFETCHED WHOLE ANSWER [1].")),
+        )
+        .with_priority(2)
+        .mount(&server)
+        .await;
+
+    let service = AiSearchService::new(indexed(&root, &db), ai_for(&server));
+    let captured = Captured::new();
+
+    let answer = service
+        .answer(
+            "GPU failure",
+            None,
+            captured.sink(),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        answer.text, "half an ans",
+        "the partial must be kept, not replaced by a second request"
+    );
+    assert!(
+        !answer.text.contains("REFETCHED"),
+        "the whole answer was re-requested behind the user's back"
+    );
+    assert_eq!(
+        server.received_requests().await.unwrap().len(),
+        1,
+        "one request only: the stream worked, the network did not"
+    );
+}
