@@ -110,6 +110,9 @@ Uninstalling removes the application, never your notes.
 | 0.5.0 | AI search — grounded answers with source references |
 | 1.0.0 | Polish — quick open, diagnostics, installer, performance |
 
+Release notes for each version are in [`docs/releases/`](docs/releases/), and
+the running log of changes is in [`CHANGELOG.md`](CHANGELOG.md).
+
 Specs, steering documents, and the release plan live in `.kiro/`. That
 directory is deliberately not committed, so it exists only in a local
 checkout.
