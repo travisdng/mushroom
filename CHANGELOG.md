@@ -10,7 +10,51 @@ dated version section and write the matching file in
 
 ## [Unreleased]
 
-Nothing yet — v0.3.0 is the current tip.
+Nothing yet — v0.4.0 is the current tip.
+
+## [0.4.0] — 2026-09-16
+
+Milestone 04 — AI provider and settings. See
+[docs/releases/v0.4.0.md](docs/releases/v0.4.0.md).
+
+### Added
+- `Tools → Settings`: a period-styled dialog with AI Service, Notes and
+  Advanced sections, OK / Cancel / Apply, and validation shown beside the
+  offending field.
+- Two provider presets — LiteLLM and OpenAI — and any other
+  OpenAI-compatible endpoint by typing a URL.
+- API keys stored in Windows Credential Manager, one per provider, never in
+  `config.json` and never returned across the IPC boundary.
+- `Test Connection`, which makes one minimal real request and reports the
+  endpoint, model and latency, or a specific reason it failed.
+- Model list from `GET /models`, with a free-text fallback for endpoints that
+  do not offer one.
+- An HTTP client with a 10 s connect timeout, a configurable overall timeout,
+  one retry on connect errors and 5xx, and cancellation that aborts the
+  in-flight request.
+- Server-sent-events streaming, ready for milestone 05.
+- Log redaction applied at the writer, so every line — including lines from
+  dependencies — is scrubbed of anything resembling a credential.
+- The notes folder can be changed from Settings, with a native folder picker.
+
+### Fixed
+- `redact()` scanned for credential prefixes in list order rather than by
+  position, so an earlier secret could be copied out verbatim on the way to a
+  later match. It had also never been wired into `tracing` at all.
+- Settings files written before the AI section kept reporting `"version": 1`,
+  because the schema constant was bumped and nothing ever wrote it.
+- The model combo filtered its options by what was already typed, so `Refresh`
+  appeared to return only the model already in the box.
+- `Refresh` and `Test Connection` built their requests from the saved settings
+  rather than the ones on screen. Since a key is stored as soon as it is
+  entered, that could send a newly-entered key to the previously-saved
+  endpoint.
+
+### Known issues
+- No AI panel yet — asking questions of your notes is milestone 05. Settings
+  configures the service; nothing calls it except Test Connection.
+- `Tools → Diagnostics` is still greyed out.
+- The installer is unsigned.
 
 ## [0.3.0] — 2026-09-16
 
