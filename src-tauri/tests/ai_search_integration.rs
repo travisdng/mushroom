@@ -465,3 +465,105 @@ async fn the_context_budget_is_respected_and_reported() {
         "excerpts were dropped but the user was not told"
     );
 }
+
+// --- Non-streaming fallback (R6.3) -------------------------------------
+
+/// A one-shot (non-SSE) chat-completions response.
+fn whole_answer(text: &str) -> serde_json::Value {
+    serde_json::json!({
+        "model": "test-model",
+        "choices": [{ "message": { "role": "assistant", "content": text } }],
+        "usage": { "prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110 }
+    })
+}
+
+#[tokio::test]
+async fn a_service_that_refuses_streaming_falls_back_without_telling_the_user() {
+    let (_dir, root, db) = corpus();
+    let server = MockServer::start().await;
+
+    // Reject the streamed request, accept the plain one — which is how an
+    // endpoint without SSE support actually behaves.
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .and(wiremock::matchers::body_string_contains("\"stream\":true"))
+        .respond_with(ResponseTemplate::new(400))
+        .with_priority(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(whole_answer("Drains early [1].")))
+        .with_priority(2)
+        .mount(&server)
+        .await;
+
+    let service = AiSearchService::new(indexed(&root, &db), ai_for(&server));
+    let captured = Captured::new();
+
+    let answer = service
+        .answer(
+            "GPU failure",
+            None,
+            captured.sink(),
+            CancellationToken::new(),
+        )
+        .await
+        .expect("the fallback should have rescued this");
+
+    assert_eq!(answer.text, "Drains early [1].");
+    assert_eq!(answer.grounding.used.len(), 1, "still grounded");
+    assert_eq!(
+        captured.streamed_text(),
+        answer.text,
+        "same shape as streaming"
+    );
+    assert_eq!(kinds_of(&captured).last().map(String::as_str), Some("done"));
+}
+
+#[tokio::test]
+async fn streaming_can_be_turned_off_in_config() {
+    let (_dir, root, db) = corpus();
+    let server = MockServer::start().await;
+
+    let seen: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let handle = Arc::clone(&seen);
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(move |req: &Request| {
+            *handle.lock().unwrap() = Some(String::from_utf8_lossy(&req.body).to_string());
+            ResponseTemplate::new(200).set_body_json(whole_answer("One shot [1]."))
+        })
+        .mount(&server)
+        .await;
+
+    let ai = Arc::new(AiService::new(AiConfig {
+        base_url: server.uri(),
+        model: "test-model".into(),
+        timeout_secs: 10,
+        stream: false,
+        ..AiConfig::default()
+    }));
+
+    let service = AiSearchService::new(indexed(&root, &db), ai);
+    let answer = service
+        .answer(
+            "GPU failure",
+            None,
+            Captured::new().sink(),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(answer.text, "One shot [1].");
+    let sent = seen.lock().unwrap().clone().unwrap();
+    assert!(
+        sent.contains("\"stream\":false"),
+        "streaming was not actually disabled: {sent}"
+    );
+}
+
+fn kinds_of(captured: &Captured) -> Vec<String> {
+    captured.kinds()
+}

@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use crate::ai::service::AiService;
+use crate::commands::ai_search::{InFlight, UsageLog};
 use crate::config::AppConfig;
 use crate::notes::service::NotesService;
 use crate::search::service::SearchService;
@@ -18,6 +19,9 @@ pub struct AppState {
     pub notes: Arc<NotesService>,
     pub search: Arc<SearchService>,
     pub ai: Arc<AiService>,
+    /// Questions currently running, so each can be cancelled by its id.
+    pub in_flight: Arc<InFlight>,
+    pub ai_usage: Arc<UsageLog>,
 }
 
 impl AppState {
@@ -29,6 +33,8 @@ impl AppState {
             notes: Arc::new(NotesService::new()),
             search: Arc::new(SearchService::new()),
             ai,
+            in_flight: Arc::new(InFlight::default()),
+            ai_usage: Arc::new(UsageLog::default()),
         }
     }
 }

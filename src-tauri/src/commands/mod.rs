@@ -4,6 +4,7 @@
 //! return a DTO. No business logic here — see `.kiro/steering/structure.md`.
 
 pub mod ai;
+pub mod ai_search;
 pub mod app;
 pub mod config;
 pub mod notes;

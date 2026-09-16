@@ -117,6 +117,11 @@ pub fn run() {
             commands::search::get_index_stats,
             commands::search::rebuild_index,
             commands::search::cancel_rebuild,
+            commands::ai_search::ai_search,
+            commands::ai_search::ai_search_cancel,
+            commands::ai_search::get_ai_history,
+            commands::ai_search::clear_ai_history,
+            commands::ai_search::get_ai_usage_stats,
         ])
         .run(tauri::generate_context!())
         .expect("Mushroom failed to start");

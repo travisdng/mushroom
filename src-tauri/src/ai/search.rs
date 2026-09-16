@@ -156,34 +156,26 @@ impl AiSearchService {
             model: config.model.clone(),
         });
 
-        let response = {
-            // The sink is moved into the streaming closure, so hand the
-            // streamed text through a channel we own rather than sharing it.
-            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
-            let stream = self.ai.stream_chat(
-                request,
-                Box::new(move |delta: &str| {
-                    // A closed receiver only means the caller stopped
-                    // listening; the request itself is cancelled separately.
-                    let _ = tx.send(delta.to_string());
-                }),
-                cancel.clone(),
-            );
-            tokio::pin!(stream);
-
-            loop {
-                tokio::select! {
-                    Some(delta) = rx.recv() => sink(AiDelta::Text { delta }),
-                    result = &mut stream => {
-                        // Drain whatever the stream produced after the last
-                        // poll, so no trailing text is lost.
-                        while let Ok(delta) = rx.try_recv() {
-                            sink(AiDelta::Text { delta });
-                        }
-                        break result;
-                    }
+        let response = if config.stream {
+            match self
+                .stream_answer(request.clone(), &mut sink, &cancel)
+                .await
+            {
+                Ok(response) => Ok(response),
+                // A provider that does not implement streaming rejects the
+                // request outright. One silent retry without it beats telling
+                // the user their endpoint is broken when it simply differs.
+                Err(err) if rejects_streaming(&err) => {
+                    tracing::info!(
+                        target: "ai",
+                        "the service refused a streamed request; retrying without streaming"
+                    );
+                    self.whole_answer(request, &mut sink, &cancel).await
                 }
+                Err(err) => Err(err),
             }
+        } else {
+            self.whole_answer(request, &mut sink, &cancel).await
         };
 
         let response = match response {
@@ -238,6 +230,61 @@ impl AiSearchService {
         Ok(answer)
     }
 
+    /// Stream the answer, forwarding each delta as it arrives.
+    async fn stream_answer(
+        &self,
+        request: ChatRequest,
+        sink: &mut DeltaSink,
+        cancel: &CancellationToken,
+    ) -> Result<crate::ai::provider::ChatResponse, AiError> {
+        // The sink is borrowed here but must be moved into the streaming
+        // closure, so the text comes back through a channel we own.
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+        let stream = self.ai.stream_chat(
+            request,
+            Box::new(move |delta: &str| {
+                // A closed receiver only means nobody is listening; the
+                // request itself is cancelled separately.
+                let _ = tx.send(delta.to_string());
+            }),
+            cancel.clone(),
+        );
+        tokio::pin!(stream);
+
+        loop {
+            tokio::select! {
+                Some(delta) = rx.recv() => sink(AiDelta::Text { delta }),
+                result = &mut stream => {
+                    // Drain anything produced since the last poll, so no
+                    // trailing text is lost.
+                    while let Ok(delta) = rx.try_recv() {
+                        sink(AiDelta::Text { delta });
+                    }
+                    break result;
+                }
+            }
+        }
+    }
+
+    /// Ask for the whole answer at once, then emit it as a single delta.
+    ///
+    /// The result shape is identical to the streamed path, so nothing
+    /// downstream — the panel included — needs to know which was used.
+    async fn whole_answer(
+        &self,
+        request: ChatRequest,
+        sink: &mut DeltaSink,
+        cancel: &CancellationToken,
+    ) -> Result<crate::ai::provider::ChatResponse, AiError> {
+        let response = self.ai.chat(request, cancel.clone()).await?;
+        if !response.content.is_empty() {
+            sink(AiDelta::Text {
+                delta: response.content.clone(),
+            });
+        }
+        Ok(response)
+    }
+
     /// Retrieve passages off the async runtime — SQLite is blocking.
     async fn retrieve(
         &self,
@@ -278,6 +325,17 @@ impl AiSearchService {
             excerpts,
         })
     }
+}
+
+/// Whether the failure looks like "this endpoint does not do streaming".
+///
+/// A 400 is what an OpenAI-compatible service returns when it cannot honour
+/// `stream: true`; a body it cannot parse as SSE shows up as a bad response.
+fn rejects_streaming(err: &AiError) -> bool {
+    matches!(
+        err,
+        AiError::ServerError { status: 400 } | AiError::BadResponse { .. }
+    )
 }
 
 struct Retrieved {

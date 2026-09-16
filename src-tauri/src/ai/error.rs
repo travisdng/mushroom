@@ -51,7 +51,15 @@ impl AiError {
     /// timeout twice, and someone who set 120 seconds does not expect to sit
     /// for four minutes before being told it did not work.
     pub fn is_retryable(&self) -> bool {
-        matches!(self, AiError::Connect { .. } | AiError::ServerError { .. })
+        match self {
+            AiError::Connect { .. } => true,
+            // Only a genuine server-side failure. `from_status` funnels every
+            // unclassified code into ServerError, so a 400 Bad Request lands
+            // here too — and repeating a request the service already called
+            // malformed just wastes the user's time.
+            AiError::ServerError { status } => *status >= 500,
+            _ => false,
+        }
     }
 
     /// Classify a reqwest failure into something a person can act on.
@@ -351,6 +359,10 @@ mod tests {
         }
         .is_retryable());
         assert!(AiError::ServerError { status: 502 }.is_retryable());
+
+        // A 400 is the service saying the request itself is wrong.
+        assert!(!AiError::ServerError { status: 400 }.is_retryable());
+        assert!(!AiError::ServerError { status: 422 }.is_retryable());
 
         // A retried timeout means waiting the whole timeout twice.
         assert!(!AiError::Timeout { seconds: 10 }.is_retryable());

@@ -30,6 +30,10 @@ pub struct AiConfig {
     pub temperature: f32,
     /// Debug aid, off by default: logs whole prompts, which are note content.
     pub log_prompts: bool,
+    /// Stream the answer as it is written. On by default; a provider that
+    /// refuses `stream: true` is fallen back on automatically, so this only
+    /// needs turning off to force the one-shot path.
+    pub stream: bool,
 }
 
 impl Default for AiConfig {
@@ -43,6 +47,7 @@ impl Default for AiConfig {
             max_context_tokens: 6000,
             temperature: 0.2,
             log_prompts: false,
+            stream: true,
         }
     }
 }
@@ -136,6 +141,8 @@ pub struct AppConfig {
     /// Where the Markdown lives. `None` until first run resolves the default.
     pub notes_root: Option<PathBuf>,
     pub ai: AiConfig,
+    /// The last 20 questions asked, most recent first (R8.1).
+    pub ai_history: Vec<String>,
 }
 
 impl Default for AppConfig {
@@ -145,6 +152,7 @@ impl Default for AppConfig {
             ui: UiState::default(),
             notes_root: None,
             ai: AiConfig::default(),
+            ai_history: Vec::new(),
         }
     }
 }
