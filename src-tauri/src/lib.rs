@@ -53,11 +53,25 @@ pub fn run() {
 
             let saved_rect = config.ui.window.clone();
             let saved_maximized = config.ui.maximized;
+            let configured_root = config.notes_root.clone();
             app.manage(AppState::new(data_dir, config));
 
             if let Some(main) = app.get_webview_window("main") {
                 window::restore(&main, saved_rect.as_ref(), saved_maximized);
             }
+
+            // Show the window first, then scan. A large notes folder must not
+            // delay the window appearing (R3.8).
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(err) = tauri::async_runtime::spawn_blocking(move || {
+                    start_notes(&handle, configured_root)
+                })
+                .await
+                {
+                    tracing::error!(target: "files", error = %err, "notes startup task failed");
+                }
+            });
 
             Ok(())
         })
@@ -72,7 +86,78 @@ pub fn run() {
             commands::app::ping,
             commands::config::get_config,
             commands::config::set_ui_state,
+            commands::config::set_notes_root,
+            commands::notes::list_notes,
+            commands::notes::get_folder_tree,
+            commands::notes::read_note,
+            commands::notes::save_note,
+            commands::notes::create_note,
+            commands::notes::rename_note,
+            commands::notes::move_note,
+            commands::notes::delete_note,
+            commands::notes::create_folder,
+            commands::notes::delete_folder,
+            commands::notes::import_notes,
+            commands::notes::export_notes,
+            commands::notes::get_notes_status,
+            commands::notes::refresh_notes,
         ])
         .run(tauri::generate_context!())
         .expect("Mushroom failed to start");
+}
+
+/// Resolve the notes folder, create it on first run, clean up any temp files a
+/// crash left behind, and populate the cache.
+///
+/// Every step here is best-effort: a missing or unreadable notes folder must
+/// leave the application running so the user can choose another one (R1.3).
+fn start_notes(app: &tauri::AppHandle, configured: Option<std::path::PathBuf>) {
+    use tauri::Emitter;
+
+    let Some(root) = notes::cache::resolve_root(configured.as_ref()) else {
+        tracing::warn!(target: "files", "no notes folder could be determined");
+        return;
+    };
+
+    if let Err(err) = notes::cache::bootstrap(&root) {
+        tracing::warn!(
+            target: "files",
+            path = %root.display(),
+            error = %err,
+            "notes folder could not be created"
+        );
+        let _ = app.emit("notes-unavailable", root.to_string_lossy().to_string());
+        return;
+    }
+
+    let swept = notes::store::sweep_temp_files(&root);
+    if swept > 0 {
+        tracing::info!(target: "files", swept, "removed leftover temp files");
+    }
+
+    let state = app.state::<AppState>();
+    if let Err(err) = state.notes.set_root(root.clone()) {
+        tracing::error!(target: "files", error = %err, "notes root could not be set");
+        return;
+    }
+
+    // Persist the resolved default so the next launch does not re-derive it.
+    if configured.is_none() {
+        if let Ok(mut config) = state.config.lock() {
+            config.notes_root = Some(root.clone());
+            let snapshot = config.clone();
+            drop(config);
+            let _ = config::save(&state.data_dir, &snapshot);
+        }
+    }
+
+    match state.notes.rescan() {
+        Ok(count) => {
+            let _ = app.emit("notes-ready", count);
+        }
+        Err(err) => {
+            tracing::error!(target: "files", error = %err, "notes scan failed");
+            let _ = app.emit("notes-unavailable", root.to_string_lossy().to_string());
+        }
+    }
 }
