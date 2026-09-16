@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and publish (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build installers and publish
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Resolve tag
+        id: tag
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event.inputs.tag }}") { "${{ github.event.inputs.tag }}" } else { "${{ github.ref_name }}" }
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "resolved tag: $tag"
+
+      # Refuse to publish a tag whose version does not match the app's own, so
+      # a mistagged release cannot ship claiming the wrong version.
+      - name: Check version matches the tag
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.tag.outputs.tag }}" -replace '^v', ''
+          $conf = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $pkg = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $cargo = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          "tag=$tag  tauri.conf=$conf  package=$pkg  Cargo=$cargo"
+          if ($conf -ne $tag -or $pkg -ne $tag -or $cargo -ne $tag) {
+            throw "Version mismatch: tag $tag but tauri.conf.json=$conf package.json=$pkg Cargo.toml=$cargo"
+          }
+
+      # Use the hand-written release notes as the GitHub release body. They say
+      # what changed and what does not work yet; a generated list would not.
+      - name: Load release notes
+        id: notes
+        shell: pwsh
+        run: |
+          $file = "docs/releases/${{ steps.tag.outputs.tag }}.md"
+          if (Test-Path $file) {
+            $body = Get-Content $file -Raw
+          } else {
+            $body = "Release ${{ steps.tag.outputs.tag }}. See CHANGELOG.md."
+            Write-Warning "No notes at $file"
+          }
+          "body<<MUSHROOM_EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $body | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "MUSHROOM_EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ steps.tag.outputs.tag }}
+          releaseName: Mushroom ${{ steps.tag.outputs.tag }}
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: false
+          prerelease: false
+          # NSIS .exe and MSI, per src-tauri/tauri.conf.json.
+          args: ""
