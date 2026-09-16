@@ -36,18 +36,17 @@ CREATE TABLE passages (
 
 CREATE INDEX idx_passages_note ON passages(note_id);
 
--- Note-level index, for ranking whole notes. Contentless: we never read the
--- columns back, only rank against them.
+-- Note-level index, for ranking whole notes. An ordinary FTS5 table keyed by
+-- notes.id: it keeps its own copy of the text, which costs a little disk but
+-- makes deletes a plain DELETE rather than FTS5's 'delete' incantation.
 CREATE VIRTUAL TABLE notes_fts USING fts5(
     title,
     body,
-    content='',
     tokenize='porter unicode61 remove_diacritics 2'
 );
 
--- Passage-level index, external-content over `passages` so the text is stored
--- once. Kept in sync explicitly rather than by trigger: a rebuild writes
--- thousands of rows, and explicit sync is far easier to reason about.
+-- Passage-level index, external-content over `passages` so passage text is
+-- stored once.
 CREATE VIRTUAL TABLE passages_fts USING fts5(
     heading_path,
     text,
@@ -55,6 +54,27 @@ CREATE VIRTUAL TABLE passages_fts USING fts5(
     content_rowid='id',
     tokenize='porter unicode61 remove_diacritics 2'
 );
+
+-- External-content FTS5 does not track its source table by itself. Triggers
+-- are the only way to stay in sync through ON DELETE CASCADE, which happens
+-- inside SQLite where application code never runs: deleting a note would
+-- otherwise leave its passages searchable forever.
+CREATE TRIGGER passages_ai AFTER INSERT ON passages BEGIN
+    INSERT INTO passages_fts(rowid, heading_path, text)
+    VALUES (new.id, new.heading_path, new.text);
+END;
+
+CREATE TRIGGER passages_ad AFTER DELETE ON passages BEGIN
+    INSERT INTO passages_fts(passages_fts, rowid, heading_path, text)
+    VALUES ('delete', old.id, old.heading_path, old.text);
+END;
+
+CREATE TRIGGER passages_au AFTER UPDATE ON passages BEGIN
+    INSERT INTO passages_fts(passages_fts, rowid, heading_path, text)
+    VALUES ('delete', old.id, old.heading_path, old.text);
+    INSERT INTO passages_fts(rowid, heading_path, text)
+    VALUES (new.id, new.heading_path, new.text);
+END;
 
 CREATE TABLE index_state (
     key   TEXT PRIMARY KEY,

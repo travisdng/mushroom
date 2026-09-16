@@ -5,3 +5,6 @@
 //! callers.
 
 pub mod extract;
+pub mod indexer;
+pub mod query;
+pub mod retriever;
