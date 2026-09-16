@@ -6,11 +6,32 @@ before 1.0 the minor version tracks the build milestone.
 
 Add entries here as work lands. On release, move the Unreleased entries into a
 dated version section and write the matching file in
-[`notes/`](notes/).
+[`docs/releases/`](docs/releases/).
 
 ## [Unreleased]
 
+Nothing yet — v0.2.0 is the current tip.
+
+## [0.2.0] — 2026-09-16
+
+Milestone 02 — notes. See [docs/releases/v0.2.0.md](docs/releases/v0.2.0.md).
+
 ### Added
+- Markdown notes on disk: create, edit, save, rename, move, and delete, with
+  folders. Notes live in `%USERPROFILE%\Mushroom
+otes` as ordinary `.md`
+  files; the first run creates `work`, `projects`, `ideas`, and `personal`.
+- Notebook pane with a folder tree and counts; notes list grouped by date,
+  newest first.
+- Markdown preview (GFM tables, code, quotes, lists) with Edit / Preview /
+  Split modes, on the View menu or `Ctrl+Shift+P`.
+- Autosave three seconds after typing stops, and on note switch and window
+  blur. Manual save on `Ctrl+S`.
+- Deletes move to `.trash` inside the notes folder and ask for confirmation,
+  with Cancel as the default.
+- Links between notes: relative `.md` paths and `[[wikilinks]]`. External
+  links open in the system browser.
+- `F5` re-reads the notes folder after external changes.
 - CI workflow running the same `npm run check` gate on every push and pull
   request, and a release workflow that builds both installers from a `v*` tag
   and publishes them to a GitHub release.
@@ -20,17 +41,32 @@ dated version section and write the matching file in
   so the gate catches build-time failures that typechecking alone misses.
 - Keyboard shortcut handlers are memoised, so the global keydown listener is
   registered once instead of on every render.
+- The folder scan no longer re-stats files the directory walk already
+  described, and reads file heads across threads. 5,000 notes scan in 1.3s.
 
 ### Fixed
 - A window closed while maximised reopened screen-sized but not maximised, and
   un-maximising did nothing visible. The maximised state is now stored
   separately and the normal-state size is preserved, so un-maximising returns
   to the size you last used.
+- Creating a note at the notes root could be rejected as a path escape, because
+  the note id was derived from a path that had not been canonicalised and could
+  carry a Windows 8.3 short name.
+- Frontmatter timestamps were quoted unnecessarily; YAML only needs a scalar
+  quoted when a colon is followed by a space.
+
+### Known issues
+- No search or AI yet — milestones 03 through 05.
+- External edits are detected on save, not live; there is no file watcher until
+  milestone 06.
+- `File → Open`, `Import`, `Export`, and `Save As` are present in the menus but
+  not yet wired to a file picker, though the backend commands exist.
+- The installer is unsigned.
 
 ## [0.1.0] — 2026-09-16
 
 Milestone 01 — the application shell. See
-[notes/v0.1.0.md](notes/v0.1.0.md).
+[docs/releases/v0.1.0.md](docs/releases/v0.1.0.md).
 
 ### Added
 - Tauri v2 + React 19 + TypeScript desktop application, 1100x720, titled
