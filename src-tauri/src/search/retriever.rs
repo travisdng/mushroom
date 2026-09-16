@@ -109,9 +109,15 @@ impl Retriever for FtsRetriever<'_> {
             )?;
 
             let like = folder.as_ref().map(|f| format!("{f}/%"));
-            let out = stmt
+            let mut out = stmt
                 .query_map(
-                    params![expression, folder, like, modified_after, fetch as i64],
+                    params![
+                        expression.clone(),
+                        folder.clone(),
+                        like.clone(),
+                        modified_after,
+                        fetch as i64
+                    ],
                     |row| {
                         Ok((
                             row.get::<_, String>(0)?,
@@ -126,6 +132,54 @@ impl Retriever for FtsRetriever<'_> {
                     },
                 )?
                 .collect::<rusqlite::Result<Vec<_>>>()?;
+
+            // A note's title is not necessarily in its body: frontmatter can
+            // name a note something the text never says. Searching for a note
+            // by its name has to work, so match titles too and rank them
+            // above body matches (R3.3), attaching the note's first passage
+            // so the hit still opens somewhere sensible.
+            let mut by_title = conn.prepare(
+                "SELECT n.path, n.title, n.folder,
+                        COALESCE(p.heading_path, ''),
+                        COALESCE(p.line_start, 1),
+                        COALESCE(p.line_end, 1),
+                        COALESCE(p.text, n.title),
+                        bm25(notes_fts, 10.0, 1.0) AS rank
+                 FROM notes_fts
+                 JOIN notes n ON n.id = notes_fts.rowid
+                 LEFT JOIN passages p ON p.note_id = n.id AND p.ordinal = 0
+                 WHERE notes_fts MATCH ?1
+                   AND (?2 IS NULL OR n.folder = ?2 OR n.folder LIKE ?3)
+                   AND (?4 IS NULL OR n.modified_at >= ?4)
+                 ORDER BY rank
+                 LIMIT ?5",
+            )?;
+
+            let titles = by_title
+                .query_map(
+                    params![expression, folder, like, modified_after, fetch as i64],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                            row.get::<_, String>(3)?,
+                            row.get::<_, i64>(4)?,
+                            row.get::<_, i64>(5)?,
+                            row.get::<_, String>(6)?,
+                            // Bias title hits ahead of body hits: bm25 is
+                            // negative, so subtracting makes it rank better.
+                            row.get::<_, f64>(7)? - 1.0,
+                        ))
+                    },
+                )?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+
+            // Keep only title hits for notes the passage query missed, so a
+            // note never appears twice from the two queries.
+            let seen: std::collections::HashSet<String> = out.iter().map(|r| r.0.clone()).collect();
+            out.extend(titles.into_iter().filter(|t| !seen.contains(&t.0)));
+
             Ok(out)
         })?;
 
@@ -289,6 +343,54 @@ mod tests {
             .retrieve(&RetrievalQuery::new("process"))
             .unwrap();
         assert!(!hits.is_empty(), "porter stemming is not working");
+    }
+
+    #[test]
+    fn a_note_is_found_by_its_title_even_when_the_body_never_says_it() {
+        // Frontmatter can name a note something its text never mentions.
+        // Searching for a note by its name has to work.
+        let (db, _dir, root) = corpus();
+        std::fs::write(
+            root.join("work/oddly-named.md"),
+            "---
+title: Quarterly Capacity Review
+---
+# Notes
+
+Something entirely unrelated to the title is written here.
+",
+        )
+        .unwrap();
+        indexer::index_note(&db, &root, &NoteId::new("work/oddly-named.md")).unwrap();
+
+        let hits = FtsRetriever::new(&db)
+            .retrieve(&RetrievalQuery::new("quarterly capacity"))
+            .unwrap();
+
+        assert!(
+            hits.iter().any(|h| h.note_id == "work/oddly-named.md"),
+            "a note must be findable by its title: {hits:?}"
+        );
+    }
+
+    #[test]
+    fn a_note_matching_in_both_title_and_body_appears_once() {
+        let (db, _dir, _root) = corpus();
+        let hits = FtsRetriever::new(&db)
+            .retrieve(&RetrievalQuery::new("gpu"))
+            .unwrap();
+
+        let mut ids: Vec<_> = hits.iter().map(|h| h.note_id.clone()).collect();
+        let before = ids.len();
+        ids.sort();
+        ids.dedup();
+        // Per-note cap is 3 by default, so duplicates would show as a note
+        // appearing more times than the cap allows.
+        assert!(before > 0);
+        for id in ids {
+            let count = hits.iter().filter(|h| h.note_id == id).count();
+            assert!(count <= 3, "{id} appeared {count} times");
+        }
     }
 
     #[test]

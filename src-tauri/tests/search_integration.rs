@@ -55,7 +55,11 @@ fn fingerprint(root: &Path) -> Vec<(String, Vec<u8>)> {
         .filter(|e| e.file_type().is_file())
         .map(|e| {
             (
-                e.path().strip_prefix(root).unwrap().to_string_lossy().into_owned(),
+                e.path()
+                    .strip_prefix(root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned(),
                 std::fs::read(e.path()).unwrap(),
             )
         })
@@ -86,7 +90,11 @@ fn the_briefs_own_example_finds_the_right_notes() {
 
     // Every hit carries a usable snippet and a line to open at.
     for hit in &results.hits {
-        assert!(!hit.snippet.trim().is_empty(), "empty snippet for {}", hit.id);
+        assert!(
+            !hit.snippet.trim().is_empty(),
+            "empty snippet for {}",
+            hit.id
+        );
         assert!(hit.line_start >= 1, "no line for {}", hit.id);
     }
 }
@@ -149,7 +157,10 @@ fn deleting_the_index_loses_nothing_and_rebuilds() {
     assert_eq!(before, after, "rebuilding the index modified the notes");
 
     let hits = svc.search("orchestrator", None, None, 10).unwrap();
-    assert!(!hits.hits.is_empty(), "search did not come back after a rebuild");
+    assert!(
+        !hits.hits.is_empty(),
+        "search did not come back after a rebuild"
+    );
     assert_eq!(svc.stats().note_count, 4);
 }
 
@@ -166,7 +177,11 @@ fn a_corrupt_index_recovers_without_losing_notes() {
 
     assert_eq!(fingerprint(&root), before, "notes were touched by recovery");
     assert_eq!(svc.stats().note_count, 4, "index did not rebuild");
-    assert!(!svc.search("orchestrator", None, None, 10).unwrap().hits.is_empty());
+    assert!(!svc
+        .search("orchestrator", None, None, 10)
+        .unwrap()
+        .hits
+        .is_empty());
 }
 
 #[test]
@@ -174,7 +189,11 @@ fn editing_a_note_updates_what_search_finds() {
     let (_dir, root, db_path) = corpus();
     let svc = indexed(&root, &db_path);
 
-    assert!(!svc.search("orchestrator", None, None, 10).unwrap().hits.is_empty());
+    assert!(!svc
+        .search("orchestrator", None, None, 10)
+        .unwrap()
+        .hits
+        .is_empty());
 
     std::fs::write(
         root.join("work/autoqa.md"),
@@ -188,7 +207,11 @@ fn editing_a_note_updates_what_search_finds() {
         !stale.hits.iter().any(|h| h.id == "work/autoqa.md"),
         "the old text is still searchable"
     );
-    assert!(!svc.search("kittens", None, None, 10).unwrap().hits.is_empty());
+    assert!(!svc
+        .search("kittens", None, None, 10)
+        .unwrap()
+        .hits
+        .is_empty());
 }
 
 /// Task 25: index and search at a realistic size.
@@ -228,7 +251,10 @@ fn scales_to_five_thousand_notes() {
     let started = Instant::now();
     let progress = svc.rebuild(&root, &on_disk, |_| {}).unwrap();
     let build_time = started.elapsed();
-    println!("full rebuild of {} notes in {:?}", progress.done, build_time);
+    println!(
+        "full rebuild of {} notes in {:?}",
+        progress.done, build_time
+    );
     assert_eq!(progress.done, 5000);
 
     // A second reconcile has nothing to do, which is the startup case.

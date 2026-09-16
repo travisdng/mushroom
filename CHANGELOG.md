@@ -10,7 +10,32 @@ dated version section and write the matching file in
 
 ## [Unreleased]
 
-Nothing yet — v0.2.0 is the current tip.
+Nothing yet — v0.3.0 is the current tip.
+
+## [0.3.0] — pending smoke test
+
+Milestone 03 — local search. See
+[docs/releases/v0.3.0.md](docs/releases/v0.3.0.md).
+
+### Added
+- Full-text search over every note with `Ctrl+F`: ranked results with marked
+  snippets, opening at the matching line.
+- Quoted phrases, `-exclusion`, `prefix*` matching, and word stemming.
+- Folder scoping and a drop-down of the last twenty queries.
+- `Tools → Rebuild Index` with progress, stating plainly that it does not
+  modify any Markdown.
+- Status bar reports `Indexing n / total…` and `Index out of date`.
+- SQLite FTS5 index at `%APPDATA%\Mushroom\mushroom.db`, storing
+  heading-delimited passages with their line ranges.
+- `Retriever` trait with normalised scores, so semantic and hybrid retrieval
+  can be added later without changing callers.
+
+### Known issues
+- Search is keyword-based; differently-worded queries will miss. Semantic
+  search is deliberately post-1.0.
+- No AI yet — milestones 04 and 05.
+- No date-range filter in the UI, though the backend supports one.
+- The installer is unsigned.
 
 ## [0.2.0] — 2026-09-16
 
