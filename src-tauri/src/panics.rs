@@ -10,6 +10,17 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use crate::error::AppError;
 
+// This whole module is a no-op under `panic = "abort"`: there is no unwind to
+// catch, so a panic in one command kills the application and any unsaved note
+// with it. It was set in `[profile.release]` once, which meant the tests below
+// passed while the shipped build had no safety net at all — the failure mode a
+// test suite is least able to notice. Fail the build instead.
+#[cfg(panic = "abort")]
+compile_error!(
+    "panics::guard needs unwinding. Remove `panic = \"abort\"` from the \
+     profile, or delete this module and everything that claims it works."
+);
+
 /// Run `work`, converting a panic into [`AppError::Internal`].
 ///
 /// The payload is logged rather than shown: a panic message is written for

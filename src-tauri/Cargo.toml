@@ -1,6 +1,6 @@
 [package]
 name = "mushroom"
-version = "0.5.0"
+version = "1.0.0"
 description = "Local-first personal knowledge and notes with AI-powered retrieval"
 authors = ["Travis Duong"]
 license = "Apache-2.0"
@@ -61,5 +61,10 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 codegen-units = 1
 lto = true
 opt-level = 3
-panic = "abort"
 strip = true
+# Deliberately NOT `panic = "abort"`, despite the smaller binary.
+# `panics::guard` catches an unwinding panic in a command and turns it into an
+# error the window can show; with `abort` there is nothing to catch and the
+# whole application dies on a bug in one operation, taking any unsaved note
+# with it. The guard is tested and documented as working, so it has to work in
+# the build people actually install, not only in `cargo test`.
