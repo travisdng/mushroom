@@ -7,5 +7,7 @@ pub mod cache;
 pub mod frontmatter;
 pub mod model;
 pub mod paths;
+pub mod selfwrites;
 pub mod service;
 pub mod store;
+pub mod watcher;

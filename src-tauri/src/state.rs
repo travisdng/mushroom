@@ -3,6 +3,7 @@
 //! The only shared mutable state in the process.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::ai::service::AiService;
@@ -22,6 +23,11 @@ pub struct AppState {
     /// Questions currently running, so each can be cancelled by its id.
     pub in_flight: Arc<InFlight>,
     pub ai_usage: Arc<UsageLog>,
+    /// Kept alive for the life of the process; dropping it stops watching.
+    pub watcher: Mutex<Option<crate::notes::watcher::NotesWatcher>>,
+    /// False when the watcher could not start. Diagnostics shows it, and the
+    /// user falls back to F5 (R2.7).
+    watching: AtomicBool,
 }
 
 impl AppState {
@@ -35,6 +41,16 @@ impl AppState {
             ai,
             in_flight: Arc::new(InFlight::default()),
             ai_usage: Arc::new(UsageLog::default()),
+            watcher: Mutex::new(None),
+            watching: AtomicBool::new(false),
         }
+    }
+
+    pub fn set_watching(&self, watching: bool) {
+        self.watching.store(watching, Ordering::Relaxed);
+    }
+
+    pub fn is_watching(&self) -> bool {
+        self.watching.load(Ordering::Relaxed)
     }
 }

@@ -273,3 +273,39 @@ fn scales_to_five_thousand_notes() {
         "scan took {scan_time:?}, budget is 1.5s"
     );
 }
+
+// --- The watcher must not react to our own saves (spec 06, R2.6) ----------
+
+#[test]
+fn saving_a_note_claims_its_path_so_the_watcher_ignores_it() {
+    // Without this the save's own filesystem event reloads the note being
+    // edited: the editor flickers and the cursor jumps mid-sentence.
+    use mushroom_lib::notes::{selfwrites, watcher};
+
+    let (service, dir) = service();
+    let root = dir.path().join("notes");
+
+    let meta = service.create("", "Watcher Self Write").unwrap();
+    let opened = service.read(&meta.id).unwrap();
+    service
+        .save(&meta.id, "changed by us", Some(opened.disk_modified))
+        .unwrap();
+
+    let path = root.join(meta.id.as_str());
+    assert!(
+        selfwrites::global().is_ours(&path),
+        "the save did not claim {}",
+        path.display()
+    );
+
+    // And the claim is specific: another note is still worth reacting to.
+    let other = root.join("someone-else-wrote-this.md");
+    assert!(!selfwrites::global().is_ours(&other));
+
+    // The temp file the save went through must never look like a note.
+    assert!(!watcher::is_watchable(
+        &root,
+        &path.with_extension("md.tmp")
+    ));
+    assert!(watcher::is_watchable(&root, &path));
+}

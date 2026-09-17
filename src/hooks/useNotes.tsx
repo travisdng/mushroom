@@ -53,6 +53,8 @@ type NotesApi = {
   openNote: (id: string, line?: number) => Promise<void>;
   /** Note ids in most-recently-opened order, for Quick Open. */
   recent: string[];
+  /** When the open note was last reloaded because it changed on disk. */
+  reloadedAt: number | null;
   setBody: (value: string) => void;
   save: () => Promise<void>;
   createNote: (folder: string, title: string) => Promise<NoteMeta | null>;
@@ -81,6 +83,30 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<NoteContent | null>(null);
   const [body, setBodyState] = useState("");
   const [dirty, setDirty] = useState(false);
+  /** When a note was last reloaded from disk, for the status message. */
+  const [reloadedAt, setReloadedAt] = useState<number | null>(null);
+
+  /**
+   * Mirrors of the above for the watcher listener.
+   *
+   * The listener is registered once and its closure captures whatever was
+   * current then — reading `dirty` or `body` from there would always see the
+   * values from when the note was opened, which is exactly how an unsaved
+   * edit would get silently overwritten.
+   */
+  const openRef = useRef<NoteContent | null>(null);
+  const bodyRef = useRef("");
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+  useEffect(() => {
+    bodyRef.current = body;
+  }, [body]);
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<AppErrorDto | null>(null);
@@ -130,6 +156,63 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
     return () => unlisten?.();
   }, [loadList]);
+
+  /**
+   * React to a note changing on disk underneath us (spec 06, R2.2–R2.4).
+   *
+   * The rule that matters: never overwrite. A note that is open and unmodified
+   * is reloaded; one with unsaved edits raises the same conflict the save path
+   * uses, so the choice is always the user's.
+   */
+  useEffect(() => {
+    if (!inDesktopApp()) return;
+
+    let unlisten: (() => void) | undefined;
+    void (async () => {
+      const { listen } = await import("@tauri-apps/api/event");
+      const stop = await listen<string[]>("notes-changed", (event) => {
+        const changed = event.payload;
+        void loadList(selectedFolder);
+
+        const openId = openRef.current?.meta.id;
+        if (!openId || !changed.includes(openId)) return;
+
+        if (dirtyRef.current) {
+          // Their edit and ours both matter. Ask; never merge silently.
+          notesService
+            .readNote(openId)
+            .then((disk) => {
+              setConflict({
+                id: openId,
+                mine: bodyRef.current,
+                diskModified: disk.diskModified,
+              });
+            })
+            .catch(() => {
+              // The note is gone or unreadable; the list refresh above already
+              // reflects that.
+            });
+          return;
+        }
+
+        notesService
+          .readNote(openId)
+          .then((fresh) => {
+            setOpen(fresh);
+            setBodyState(fresh.body);
+            setDirty(false);
+            setReloadedAt(Date.now());
+          })
+          .catch(() => {
+            // Deleted while open: leave the buffer alone rather than blanking
+            // what the user can still see and copy out.
+          });
+      });
+      unlisten = stop;
+    })();
+
+    return () => unlisten?.();
+  }, [loadList, selectedFolder]);
 
   /** Write the buffer if it differs from disk. Returns false on conflict. */
   const flush = useCallback(async (): Promise<boolean> => {
@@ -384,6 +467,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       selectFolder,
       openNote,
       recent,
+      reloadedAt,
       setBody,
       save,
       createNote,
@@ -414,6 +498,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       selectFolder,
       openNote,
       recent,
+      reloadedAt,
       setBody,
       save,
       createNote,

@@ -80,13 +80,15 @@ export default function MainWindow() {
     if (search.progress) {
       const { done, total } = search.progress;
       setStatus(total > 0 ? `Indexing ${done} / ${total}…` : "Indexing…");
-    } else if (notes.saving) setStatus("Saving…");
+    } else if (notes.reloadedAt) setStatus("Reloaded from disk", 3000);
+    else if (notes.saving) setStatus("Saving…");
     else if (notes.dirty) setStatus("Modified");
     else if (search.stats?.stale) setStatus("Index out of date");
     else if (notes.lastSavedAt) {
       setStatus(`Saved ${new Date(notes.lastSavedAt).toLocaleTimeString()}`);
     }
   }, [
+    notes.reloadedAt,
     notes.saving,
     notes.dirty,
     notes.lastSavedAt,

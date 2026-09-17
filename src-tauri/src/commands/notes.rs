@@ -213,6 +213,9 @@ pub struct NotesStatus {
     pub count: usize,
     pub skipped: usize,
     pub available: bool,
+    /// False when the notes folder could not be watched — a network share, or
+    /// a permissions problem. Everything still works; F5 refreshes (R2.7).
+    pub watching: bool,
 }
 
 #[tauri::command]
@@ -223,6 +226,7 @@ pub fn get_notes_status(state: tauri::State<'_, AppState>) -> NotesStatus {
         root: root.map(|r| r.to_string_lossy().to_string()),
         count: state.notes.count(),
         skipped: state.notes.skipped(),
+        watching: state.is_watching(),
     }
 }
 

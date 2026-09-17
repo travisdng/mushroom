@@ -44,4 +44,6 @@ export type NotesStatus = {
   count: number;
   skipped: number;
   available: boolean;
+  /** False when the notes folder could not be watched; F5 still refreshes. */
+  watching: boolean;
 };

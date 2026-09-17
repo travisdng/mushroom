@@ -68,6 +68,11 @@ pub fn derive_title(id: &NoteId, fm: &frontmatter::Frontmatter, body: &str) -> S
 /// Temp file in the same directory (so the rename stays on one volume), flushed
 /// and fsynced, then renamed over the target. Never a truncate-in-place.
 pub fn atomic_write(path: &Path, contents: &str) -> Result<(), AppError> {
+    // Claim the path before writing, not after: the change notification can
+    // arrive while the rename is still in flight, and a claim registered too
+    // late is a claim that does not work.
+    crate::notes::selfwrites::global().record(path);
+
     let parent = path.parent().ok_or_else(|| AppError::NoteWrite {
         path: path.to_path_buf(),
         source: std::io::Error::other("note path has no parent directory"),

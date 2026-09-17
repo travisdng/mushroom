@@ -27,6 +27,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 walkdir = "2"
+# Filesystem watching: ReadDirectoryChangesW on Windows.
+notify = "8"
 # dunce::canonicalize avoids the \?\ verbatim prefix that breaks path
 # comparison and display on Windows.
 dunce = "1"

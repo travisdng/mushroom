@@ -185,6 +185,92 @@ fn start_notes(app: &tauri::AppHandle, configured: Option<std::path::PathBuf>) {
     }
 
     start_search(app, &root);
+    start_watching(app, &root);
+}
+
+/// Watch the notes folder so edits made elsewhere show up without an F5.
+///
+/// Failure is survivable and deliberately quiet: a network share or a locked
+/// folder means no watching, not no application. The flag is surfaced in
+/// Diagnostics and manual refresh keeps working (R2.7).
+fn start_watching(app: &tauri::AppHandle, root: &std::path::Path) {
+    use tauri::Emitter;
+
+    let handle = app.clone();
+
+    let outcome = notes::watcher::watch(
+        root,
+        // The very registry `store::atomic_write` records into. A fresh one
+        // here would claim nothing, and every save would reload itself.
+        notes::selfwrites::shared(),
+        move |changes| {
+            on_notes_changed(&handle, changes);
+        },
+    );
+
+    let state = app.state::<AppState>();
+    match outcome {
+        Ok(watcher) => {
+            if let Ok(mut slot) = state.watcher.lock() {
+                *slot = Some(watcher);
+            }
+            state.set_watching(true);
+            tracing::info!(target: "files", path = %root.display(), "watching the notes folder");
+        }
+        Err(err) => {
+            state.set_watching(false);
+            tracing::warn!(
+                target: "files",
+                error = %err,
+                "the notes folder could not be watched; use F5 to refresh"
+            );
+            let _ = app.emit("watch-unavailable", ());
+        }
+    }
+}
+
+/// Apply changes the watcher reported and tell the window which notes moved.
+fn on_notes_changed(app: &tauri::AppHandle, changes: Vec<notes::watcher::NoteChange>) {
+    use tauri::Emitter;
+
+    use crate::notes::model::NoteId;
+    use crate::notes::watcher::NoteChange;
+
+    let state = app.state::<AppState>();
+    let Ok(root) = state.notes.root() else {
+        return;
+    };
+
+    let mut touched: Vec<String> = Vec::new();
+
+    for change in changes {
+        let path = match &change {
+            NoteChange::Written(path) | NoteChange::Removed(path) => path.clone(),
+        };
+        let Ok(relative) = path.strip_prefix(&root) else {
+            continue;
+        };
+        let id = NoteId::new(relative.to_string_lossy().to_string());
+
+        match change {
+            NoteChange::Written(_) => state.search.index_note_best_effort(&root, &id),
+            NoteChange::Removed(_) => state.search.remove_note_best_effort(&id),
+        }
+        touched.push(id.as_str().to_string());
+    }
+
+    if touched.is_empty() {
+        return;
+    }
+
+    // Bring the cached list back in line before telling the window, so that
+    // whatever it does next sees the new state.
+    if let Err(err) = state.notes.rescan() {
+        tracing::warn!(target: "files", error = %err, "rescan after an external change failed");
+    }
+
+    tracing::info!(target: "files", count = touched.len(), "notes changed on disk");
+    let _ = app.emit("notes-changed", touched);
 }
 
 /// Open the search index and bring it in line with what was just scanned.
