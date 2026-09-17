@@ -28,6 +28,17 @@ pub struct AppState {
     /// False when the watcher could not start. Diagnostics shows it, and the
     /// user falls back to F5 (R2.7).
     watching: AtomicBool,
+    /// When the process started doing our work, for the startup timing in the
+    /// log. Taken as early as the state exists, which is the closest thing to
+    /// "launch" that is observable from inside the process.
+    pub started: std::time::Instant,
+    /// Set once the window reports its first paint, so a second report cannot
+    /// overwrite the first with a larger number.
+    reported_ready: AtomicBool,
+    /// The welcome note, when this launch created one. Taken by the window
+    /// rather than pushed to it: the startup scan can finish before the
+    /// WebView exists, and an event emitted then reaches nobody.
+    first_run_note: Mutex<Option<String>>,
 }
 
 impl AppState {
@@ -43,7 +54,29 @@ impl AppState {
             ai_usage: Arc::new(UsageLog::default()),
             watcher: Mutex::new(None),
             watching: AtomicBool::new(false),
+            started: std::time::Instant::now(),
+            reported_ready: AtomicBool::new(false),
+            first_run_note: Mutex::new(None),
         }
+    }
+
+    pub fn set_first_run_note(&self, id: String) {
+        if let Ok(mut slot) = self.first_run_note.lock() {
+            *slot = Some(id);
+        }
+    }
+
+    /// Take the welcome note, if there is one. Clearing it as it goes is what
+    /// makes this safe to call from more than one place, which it has to be:
+    /// the window asks on mount and again when the scan reports in, because
+    /// either can happen first.
+    pub fn take_first_run_note(&self) -> Option<String> {
+        self.first_run_note.lock().ok()?.take()
+    }
+
+    /// Claim the one-shot startup report. `true` the first time only.
+    pub fn claim_ready_report(&self) -> bool {
+        !self.reported_ready.swap(true, Ordering::Relaxed)
     }
 
     pub fn set_watching(&self, watching: bool) {

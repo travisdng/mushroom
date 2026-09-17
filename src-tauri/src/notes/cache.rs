@@ -194,6 +194,79 @@ pub fn bootstrap(root: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Bootstrap, plus the welcome note when the folder did not exist at all.
+///
+/// Separate from [`bootstrap`] on purpose. Making the folder usable and
+/// greeting a new user are different jobs with different triggers: pointing
+/// Mushroom at an existing folder of notes should create nothing, and every
+/// test that builds a corpus calls `bootstrap` and would otherwise find an
+/// extra note in it.
+///
+/// Returns the welcome note so the caller can open it. A note nobody reads
+/// explains nothing, and "wrote a file somewhere" is not a first-run
+/// experience (R7.1).
+pub fn bootstrap_with_welcome(root: &Path) -> std::io::Result<Option<NoteId>> {
+    // Decided before anything is created.
+    let fresh = !root.exists();
+    bootstrap(root)?;
+
+    if !fresh {
+        return Ok(None);
+    }
+
+    // Only ever on a genuinely new folder. The welcome note is an ordinary
+    // note — the user can edit or delete it — and an app that quietly
+    // recreated it on the next launch would be overriding that (R7.2).
+    std::fs::write(root.join(WELCOME_NAME), WELCOME_BODY)?;
+    Ok(Some(NoteId::new(WELCOME_NAME)))
+}
+
+pub const WELCOME_NAME: &str = "Welcome to Mushroom.md";
+
+/// Deliberately short. A first-run note that fills the screen is one nobody
+/// reads; this one fits without scrolling and every claim in it is something
+/// the reader can try immediately.
+const WELCOME_BODY: &str = "\
+---
+title: Welcome to Mushroom
+tags: [welcome]
+---
+
+# Welcome to Mushroom
+
+This is an ordinary note. Edit it, or delete it - it will not come back.
+
+## Your notes are files
+
+Everything you write here is a Markdown file in your notes folder. Open them
+in any editor, put them in Dropbox or Git, or walk away from Mushroom
+entirely and keep every word. There is no database to be locked out of: the
+search index is built from your files and can be deleted at any time.
+
+## Getting around
+
+- Ctrl+N makes a new note.
+- Ctrl+P is Quick Open: type any part of a note's name and go straight to it.
+- Ctrl+F searches everything you have written.
+- Ctrl+S saves, though Mushroom also saves on its own.
+- F1 lists every shortcut.
+- View > Preview renders a note instead of showing the Markdown, and
+  View > Split shows both at once.
+
+## Asking questions
+
+The AI button answers questions from your own notes and cites which ones it
+used, so you can check it. It needs an API key first, under Tools > Settings.
+Mushroom works entirely without one - search, notes and everything else are
+local and always will be.
+
+## If something looks wrong
+
+Tools > Diagnostics shows where your notes and index live and what the app has
+been doing. Copy Diagnostics puts that on the clipboard with your API keys
+removed.
+";
+
 /// Resolve the notes root, creating the default one if none is configured.
 ///
 /// Returns the path even when it could not be created, so the UI can say which
@@ -313,5 +386,76 @@ mod tests {
             "content",
             "re-running bootstrap must not disturb existing notes"
         );
+    }
+
+    #[test]
+    fn a_first_run_writes_a_welcome_note() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("notes");
+        let welcome = bootstrap_with_welcome(&root).unwrap();
+        assert_eq!(
+            welcome.unwrap().as_str(),
+            WELCOME_NAME,
+            "must be returned to be opened"
+        );
+
+        let body = std::fs::read_to_string(root.join(WELCOME_NAME)).unwrap();
+        assert!(body.starts_with("---\ntitle: Welcome to Mushroom"));
+        // It has to be a note the scanner finds, not a special case.
+        let found = store::scan(&root);
+        assert_eq!(found.notes.len(), 1);
+        assert_eq!(found.notes[0].title, "Welcome to Mushroom");
+    }
+
+    #[test]
+    fn a_deleted_welcome_note_stays_deleted() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("notes");
+        bootstrap_with_welcome(&root).unwrap();
+        std::fs::remove_file(root.join(WELCOME_NAME)).unwrap();
+
+        // Every launch runs this. Recreating the note the user threw away
+        // would be the app arguing with them.
+        assert!(bootstrap_with_welcome(&root).unwrap().is_none());
+        assert!(bootstrap_with_welcome(&root).unwrap().is_none());
+        assert!(!root.join(WELCOME_NAME).exists());
+    }
+
+    #[test]
+    fn an_edited_welcome_note_is_left_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("notes");
+        bootstrap(&root).unwrap();
+        std::fs::write(root.join(WELCOME_NAME), "# Mine now\n").unwrap();
+
+        bootstrap(&root).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(root.join(WELCOME_NAME)).unwrap(),
+            "# Mine now\n"
+        );
+    }
+
+    #[test]
+    fn an_existing_folder_gains_no_welcome_note() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("notes");
+        // Someone pointing Mushroom at a folder of notes they already have.
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("existing.md"), "# Existing\n").unwrap();
+
+        assert!(bootstrap_with_welcome(&root).unwrap().is_none());
+        assert!(!root.join(WELCOME_NAME).exists());
+    }
+
+    #[test]
+    fn plain_bootstrap_never_writes_a_welcome_note() {
+        // Every test corpus in the suite is built with `bootstrap`; a stray
+        // note in it would shift counts in tests that have nothing to do with
+        // first runs, and the failures would point anywhere but here.
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("notes");
+        bootstrap(&root).unwrap();
+        assert!(!root.join(WELCOME_NAME).exists());
+        assert_eq!(store::scan(&root).notes.len(), 0);
     }
 }

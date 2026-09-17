@@ -94,6 +94,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::ping,
+            commands::app::report_window_ready,
+            commands::app::take_first_run_note,
             commands::ai::get_ai_settings,
             commands::ai::get_provider_defaults,
             commands::ai::set_ai_config,
@@ -152,16 +154,19 @@ fn start_notes(app: &tauri::AppHandle, configured: Option<std::path::PathBuf>) {
         return;
     };
 
-    if let Err(err) = notes::cache::bootstrap(&root) {
-        tracing::warn!(
-            target: "files",
-            path = %root.display(),
-            error = %err,
-            "notes folder could not be created"
-        );
-        let _ = app.emit("notes-unavailable", root.to_string_lossy().to_string());
-        return;
-    }
+    let welcome = match notes::cache::bootstrap_with_welcome(&root) {
+        Ok(welcome) => welcome,
+        Err(err) => {
+            tracing::warn!(
+                target: "files",
+                path = %root.display(),
+                error = %err,
+                "notes folder could not be created"
+            );
+            let _ = app.emit("notes-unavailable", root.to_string_lossy().to_string());
+            return;
+        }
+    };
 
     let swept = notes::store::sweep_temp_files(&root);
     if swept > 0 {
@@ -186,6 +191,12 @@ fn start_notes(app: &tauri::AppHandle, configured: Option<std::path::PathBuf>) {
 
     match state.notes.rescan() {
         Ok(count) => {
+            // Set before the event, so a window that asks the moment it hears
+            // `notes-ready` cannot arrive before the answer is there.
+            if let Some(id) = welcome {
+                tracing::info!(target: "files", "first run: created the welcome note");
+                state.set_first_run_note(id.as_str().to_string());
+            }
             let _ = app.emit("notes-ready", count);
         }
         Err(err) => {

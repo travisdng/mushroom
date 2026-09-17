@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from "react";
 import * as configService from "../services/configService";
 import * as notesService from "../services/notesService";
+import { takeFirstRunNote } from "../services/appService";
 import { inDesktopApp } from "../services/ipc";
 import type {
   FolderNode,
@@ -122,6 +123,33 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setError(e as AppErrorDto);
   }, []);
 
+  /**
+   * Open the welcome note on a genuine first run (R7.1).
+   *
+   * Asked for, not listened for. The first attempt used an event and it never
+   * fired: on a fresh profile the backend finishes its scan about 30 ms in and
+   * the window paints 300 ms later, so the event was emitted into an empty
+   * room. The backend holds the note and hands it over once instead, so it
+   * does not matter which side is ready first — and this runs both on mount
+   * and when the scan reports in, because either can win.
+   *
+   * `openNote` is reached through a ref because it is defined further down and
+   * is rebuilt whenever its own dependencies change; the ref is assigned during
+   * render, not in an effect, so it is never null by the time an effect runs.
+   */
+  const openNoteRef = useRef<((id: string) => Promise<void>) | null>(null);
+
+  const openWelcomeIfFirstRun = useCallback(async () => {
+    if (!inDesktopApp()) return;
+    try {
+      const id = await takeFirstRunNote();
+      if (id) await openNoteRef.current?.(id);
+    } catch {
+      // A welcome note that will not open is not worth an error dialog on
+      // somebody's first ever launch.
+    }
+  }, []);
+
   const loadList = useCallback(
     async (folder: string | null) => {
       try {
@@ -150,12 +178,15 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const { listen } = await import("@tauri-apps/api/event");
       const stop = await listen("notes-ready", () => {
         void loadList(null);
+        void openWelcomeIfFirstRun();
       });
       unlisten = stop;
     })();
 
+    void openWelcomeIfFirstRun();
+
     return () => unlisten?.();
-  }, [loadList]);
+  }, [loadList, openWelcomeIfFirstRun]);
 
   /**
    * React to a note changing on disk underneath us (spec 06, R2.2–R2.4).
@@ -296,6 +327,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     },
     [flush, reportError],
   );
+
+  openNoteRef.current = openNote;
 
   const setBody = useCallback((value: string) => {
     setBodyState(value);
