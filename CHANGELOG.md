@@ -8,9 +8,68 @@ Add entries here as work lands. On release, move the Unreleased entries into a
 dated version section and write the matching file in
 [`docs/releases/`](docs/releases/).
 
-## [Unreleased]
+## [1.0.0] — 2026-09-18
 
-Nothing yet — v0.5.0 is the current tip.
+Milestone 06 — polish and packaging. See
+[docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
+
+### Added
+- **Quick Open** (`Ctrl+P`) — type any part of a note's name or folder and go
+  straight to it. Matched in the window against the cached list, so there is no
+  round trip per keystroke.
+- **Mushroom notices edits made outside it.** The notes folder is watched; a
+  change from another editor updates the list and the index within a second. An
+  open, unmodified note reloads in place; one with unsaved changes asks, with
+  `Keep mine` / `Load theirs` / `Save as copy`. Nothing is overwritten silently.
+- **Diagnostics** (`Tools → Diagnostics`) — versions, paths, index health, AI
+  status and the tail of the log on one screen, with `Copy Diagnostics`,
+  `Open Log Folder`, `Rebuild Index…`, `Test Connection…` and `Delete Old Logs`.
+  The copied report has API keys removed and home paths rewritten, and says so
+  along with what it does still include.
+- **Log rotation** — one file per day, seven days, pruned at startup.
+- A first-run `Welcome to Mushroom` note, **opened** so it is read rather than
+  merely created. It is an ordinary note: edit it, delete it, and it stays
+  deleted.
+- Documentation: [`docs/search-syntax.md`](docs/search-syntax.md) (linked from
+  the search panel), [`docs/troubleshooting.md`](docs/troubleshooting.md), and
+  [`docs/error-audit.md`](docs/error-audit.md).
+- A reproducible 5,000-note benchmark corpus and the harness that measures
+  against it: `scripts/make-corpus.mjs`, `scripts/bench.ps1`, and
+  `src-tauri/tests/bench.rs`.
+- The uninstaller now says, before removing anything, that your notes and
+  settings are kept and where they are.
+- `src-tauri/tauri.signed.conf.json`, so a signed build needs a certificate and
+  two environment variables rather than a code change.
+
+### Fixed
+- **A panic in one operation killed the whole application.**
+  `[profile.release]` set `panic = "abort"`, so `panics::guard` — which is
+  tested, and which the error audit said turned panics into ordinary errors —
+  had nothing to catch in the build people install. It now compiles only under
+  unwinding, so this cannot come back quietly.
+- **Every control was invisible to `Tab`.** `reset.css` removed the focus
+  outline without replacing it, so dialog fields, the question box, Quick Open
+  and the toolbar had no visible focus. A dotted focus rectangle is now global.
+- **A settings file with a UTF-8 byte-order mark reset every setting.** The
+  BOM is now stripped before parsing. Windows PowerShell writes one by default,
+  which is how this was found.
+- **A window could be restored where it cannot be dragged back.** A saved
+  position was accepted if any part of it overlapped a monitor, including one
+  whose title bar sat above the screen.
+- The keyboard shortcut list claimed `Ctrl+F` and `Ctrl+P` were unavailable
+  long after both worked. There is now one list that the dialog, the docs and
+  the handler map are all checked against — a documented shortcut with no
+  handler is a compile error.
+- The folder watcher woke twice a second for the life of the session whether or
+  not anything had changed. It now sleeps until the filesystem wakes it.
+- The preview re-parsed the entire note on every keystroke despite being
+  debounced: it reads the note context, and a context consumer re-renders when
+  the context changes whatever its props say. The rendered output is now
+  memoised on the text.
+
+### Changed
+- The note list is virtualised: 5,000 notes render about forty rows rather than
+  five thousand.
 
 ## [0.5.0] — 2026-09-17
 
