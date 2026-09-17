@@ -1,23 +1,12 @@
 import { Dialog } from "./Dialog";
+import { SHORTCUTS } from "../../services/shortcuts";
 
 /**
- * R3.8 — lists only what this build actually supports. Anything shown here
- * that does not work is a bug; anything that works and is missing is too.
+ * R3.8 — lists only what this build actually supports.
+ *
+ * Rendered from the single shortcut list, so it cannot drift from what the
+ * keys actually do. It did drift once, which is why the list exists.
  */
-const SHORTCUTS: Array<{ combo: string; action: string; works: boolean }> = [
-  { combo: "Alt", action: "Focus the menu bar", works: true },
-  { combo: "Ctrl+Shift+F", action: "Toggle the AI panel", works: true },
-  { combo: "F1", action: "This dialog", works: true },
-  { combo: "Escape", action: "Close menu or dialog", works: true },
-  { combo: "Ctrl+N", action: "New note", works: true },
-  { combo: "Ctrl+S", action: "Save", works: true },
-  { combo: "Ctrl+Shift+P", action: "Toggle preview", works: true },
-  { combo: "F5", action: "Refresh notes", works: true },
-  { combo: "Ctrl+O", action: "Open", works: false },
-  { combo: "Ctrl+F", action: "Search notes", works: false },
-  { combo: "Ctrl+P", action: "Quick open", works: false },
-];
-
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog title="Keyboard Shortcuts" onClose={onClose} acceptOnly width={380}>
@@ -31,16 +20,18 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
                   paddingRight: 10,
                   verticalAlign: "top",
                   fontFamily: "var(--font-mono)",
-                  color: s.works ? undefined : "var(--text-disabled)",
+                  color: s.available ? undefined : "var(--text-disabled)",
                 }}
               >
                 {s.combo}
               </td>
               <td
-                style={{ color: s.works ? undefined : "var(--text-disabled)" }}
+                style={{
+                  color: s.available ? undefined : "var(--text-disabled)",
+                }}
               >
                 {s.action}
-                {s.works ? "" : " — not available yet"}
+                {s.available ? "" : " — not available yet"}
               </td>
             </tr>
           ))}

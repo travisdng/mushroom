@@ -29,6 +29,7 @@ import { useShell, NOT_AVAILABLE } from "../hooks/useShell";
 import { useNotes } from "../hooks/useNotes";
 import { useSearch } from "../hooks/useSearch";
 import { useShortcuts } from "../hooks/useShortcuts";
+import type { ManagedCombo } from "../services/shortcuts";
 
 const SIDEBAR_MIN = 160;
 const EDITOR_MIN = 320;
@@ -121,7 +122,10 @@ export default function MainWindow() {
     if (!shell.ui.showSearchPanel) togglePanel("search");
   }, [shell.ui.showSearchPanel, togglePanel]);
 
-  const shortcutHandlers = useMemo(
+  // Typed against the shortcut list: a shortcut documented as available with
+  // no handler here, or a handler for one that is not documented, is a
+  // compile error rather than something a user discovers.
+  const shortcutHandlers = useMemo<Record<ManagedCombo, () => void>>(
     () => ({
       "Ctrl+N": newNote,
       "Ctrl+S": () => void save(),

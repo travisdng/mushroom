@@ -59,9 +59,20 @@ textarea {
   color: inherit;
 }
 
-/* No modern focus rings — see .focus-ring in tokens.css. */
+/* No modern focus ring on a mouse click — but a keyboard user must always be
+   able to see where they are (R1.7). `:focus-visible` is exactly that
+   distinction, and a dotted rectangle is what the period used.
+
+   This was `outline: none` on `:focus` with nothing to replace it, so every
+   control that had not opted in individually — dialog fields, the question
+   box, toolbar buttons, menu titles — was invisible to tab. */
 :focus {
   outline: none;
+}
+
+:focus-visible {
+  outline: 1px dotted var(--text);
+  outline-offset: 1px;
 }
 
 ::selection {
