@@ -58,3 +58,91 @@ select.field {
 .field[type="password"]::-ms-clear {
   display: none;
 }
+
+/* ---------------------------------------------------------- Diagnostics */
+
+.diagnostics__facts {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.diagnostics__label {
+  width: 140px;
+  vertical-align: top;
+  text-align: right;
+  padding-right: 8px;
+  color: var(--text);
+}
+
+.diagnostics__value {
+  word-break: break-all;
+}
+
+.diagnostics__actions {
+  margin-top: 6px;
+}
+
+.diagnostics__filters {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.diagnostics__filters select.field {
+  width: auto;
+  min-width: 70px;
+}
+
+/* Sunken, monospace, and scrolled — a log window, not a document. */
+.diagnostics__log {
+  height: 180px;
+  overflow: auto;
+  background: var(--field-bg);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+  font-family: var(--font-mono);
+  padding: 2px;
+}
+
+.diagnostics__line {
+  display: flex;
+  gap: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diagnostics__line[data-level="WARN"] {
+  color: #806000;
+}
+
+.diagnostics__line[data-level="ERROR"] {
+  color: #800000;
+}
+
+.diagnostics__time,
+.diagnostics__level,
+.diagnostics__category {
+  flex: none;
+  color: var(--text-disabled);
+}
+
+.diagnostics__level {
+  width: 42px;
+}
+
+.diagnostics__category {
+  width: 48px;
+}
+
+.diagnostics__message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.diagnostics__empty {
+  padding: 4px;
+  color: var(--text-disabled);
+}

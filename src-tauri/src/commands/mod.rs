@@ -7,5 +7,6 @@ pub mod ai;
 pub mod ai_search;
 pub mod app;
 pub mod config;
+pub mod diagnostics;
 pub mod notes;
 pub mod search;

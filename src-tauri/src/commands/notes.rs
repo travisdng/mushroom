@@ -18,9 +18,13 @@ where
     F: FnOnce() -> Result<T, AppError> + Send + 'static,
     T: Send + 'static,
 {
-    tauri::async_runtime::spawn_blocking(work)
+    // Guarded: every note operation runs through here, and a panic in one
+    // would otherwise leave the window waiting on a promise that never
+    // settles — a button that does nothing, with no explanation (R4.5).
+    tauri::async_runtime::spawn_blocking(move || crate::panics::guard("this operation", work))
         .await
         .map_err(|e| AppError::Internal(format!("background task failed: {e}")))?
+        .and_then(|inner| inner)
         .map_err(AppErrorDto::from)
 }
 

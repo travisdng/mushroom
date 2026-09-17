@@ -9,6 +9,7 @@ import { Splitter } from "../components/common/Splitter";
 import { EmptyState } from "../components/common/EmptyState";
 import { AboutDialog } from "../components/common/AboutDialog";
 import { ShortcutsDialog } from "../components/common/ShortcutsDialog";
+import { DiagnosticsDialog } from "../components/common/DiagnosticsDialog";
 import { FolderTree } from "../components/notebook/FolderTree";
 import { NoteList } from "../components/notebook/NoteList";
 import {
@@ -47,6 +48,7 @@ type DialogKind =
   | { kind: "rebuild" }
   | { kind: "settings" }
   | { kind: "quick-open" }
+  | { kind: "diagnostics" }
   | null;
 
 export default function MainWindow() {
@@ -307,7 +309,12 @@ export default function MainWindow() {
         },
         { type: "separator" },
         { type: "item", label: "Settings", mnemonic: "S", onSelect: () => setDialog({ kind: "settings" }) },
-        { type: "item", label: "Diagnostics", mnemonic: "D" },
+        {
+          type: "item",
+          label: "Diagnostics",
+          mnemonic: "D",
+          onSelect: () => setDialog({ kind: "diagnostics" }),
+        },
       ],
     },
     {
@@ -393,6 +400,13 @@ export default function MainWindow() {
 
       <StatusBar />
 
+      {dialog?.kind === "diagnostics" ? (
+        <DiagnosticsDialog
+          onClose={() => setDialog(null)}
+          onRebuildIndex={() => setDialog({ kind: "rebuild" })}
+          onOpenSettings={() => setDialog({ kind: "settings" })}
+        />
+      ) : null}
       {dialog?.kind === "quick-open" ? (
         <QuickOpenDialog
           notes={notes.notes}

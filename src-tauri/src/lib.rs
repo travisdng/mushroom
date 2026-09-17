@@ -7,9 +7,11 @@ pub mod ai;
 mod commands;
 pub mod config;
 pub mod database;
+pub mod diagnostics;
 mod error;
 pub mod logging;
 pub mod notes;
+pub mod panics;
 pub mod search;
 mod state;
 mod window;
@@ -37,7 +39,11 @@ pub fn run() {
 
             let log_dir = data_dir.join("logs");
             std::fs::create_dir_all(&log_dir).ok();
+            let removed = diagnostics::logs::prune(&log_dir);
             let guard = logging::init(&log_dir);
+            if removed > 0 {
+                tracing::info!(target: "app", removed, "old logs removed");
+            }
             // Hold the writer guard for the life of the process.
             app.manage(guard);
 
@@ -123,6 +129,11 @@ pub fn run() {
             commands::ai_search::get_ai_history,
             commands::ai_search::clear_ai_history,
             commands::ai_search::get_ai_usage_stats,
+            commands::diagnostics::get_diagnostics,
+            commands::diagnostics::copy_diagnostics,
+            commands::diagnostics::get_log_tail,
+            commands::diagnostics::open_log_folder,
+            commands::diagnostics::delete_logs,
         ])
         .run(tauri::generate_context!())
         .expect("Mushroom failed to start");
