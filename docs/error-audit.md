@@ -29,7 +29,7 @@ Rules each row is judged against, from `.kiro/steering/error-handling.md`:
 | **Rejected API key** | a bogus key against the real OpenAI API | "The AI service refused the key (401). Check the key in Tools → Settings." Retrieved notes stayed listed and clickable. |
 | **Stream broken mid-answer** | a stub server that destroys the socket part-way | One request only, partial answer kept, "This answer is incomplete — it stopped before the model finished." |
 | **User stops an answer** | `Stop` mid-stream | Partial kept and marked; **no** error strip — stopping is not a failure. |
-| **Panic inside a command** | unit tests in `panics.rs` | Becomes `AppError::Internal`; payload and backtrace logged; the next command still works. |
+| **Panic inside a command** | unit tests in `panics.rs` | Becomes `AppError::Internal`; payload and backtrace logged; the next command still works. See the note below about the release profile. |
 | **Watcher cannot start** | unit test against a non-existent folder | Returns an error rather than panicking; `watching: false` surfaces in Diagnostics and `F5` still refreshes. |
 
 ## Not forced
@@ -43,6 +43,7 @@ Recorded rather than quietly skipped.
 | **Database locked by another writer** | needs a second SQLite process holding a write lock | Search would degrade; notes are a separate path and unaffected. |
 | **Panic surfaced through IPC** | the guard is unit-tested, but no deliberate panicking command is wired | The wrapper is on the shared `blocking` helper every note command uses. |
 | **Network lost mid-answer (real adapter)** | a stub socket drop stood in for it | Believed equivalent; the reqwest error class may differ. |
+| **The OS cannot say where application data lives** | reproduced by accident while testing a first run with a stripped environment | The setup hook returns `AppError::NoDataDir`, which Tauri turns into a panic before any window exists, so the message reaches a console nobody is looking at. On a healthy Windows this cannot happen; the alternative — running with nowhere to save settings or the index — is worse than refusing to start. Left as it is, deliberately, and written down here rather than discovered later. |
 
 ## Fixed because of this audit
 
@@ -51,3 +52,12 @@ Recorded rather than quietly skipped.
   be an internal hostname. The report now states plainly that it includes the
   endpoint and folder structure, so nobody pastes it into a public issue
   assuming otherwise.
+
+- **Panic safety did not exist in the shipped build.** `[profile.release]` set
+  `panic = "abort"`, so there was no unwind for `panics::guard` to catch: every
+  test in `panics.rs` passed, this table said panics became errors, and in the
+  installer people would actually download, a panic in one note operation
+  killed the process and any unsaved note with it. Exactly the failure a test
+  suite cannot see, because the tests never run under that profile. `abort` is
+  gone, and `panics.rs` now fails to compile under it rather than going quiet
+  again.

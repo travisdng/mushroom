@@ -11,3 +11,7 @@ export type AppInfo = {
  * package.json via `define` in vite.config.ts.
  */
 export const APP_VERSION: string = __APP_VERSION__;
+
+/** Where the documentation lives, for the handful of places that link to it. */
+export const DOCS_BASE =
+  "https://github.com/travisdng/mushroom/blob/main/docs";

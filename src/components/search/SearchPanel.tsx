@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../common/Button";
 import { useSearch } from "../../hooks/useSearch";
 import { useNotes } from "../../hooks/useNotes";
+import { openDocs } from "../../services/docs";
+import { DOCS_BASE } from "../../types/app";
 import type { SearchHit } from "../../types/search";
 
 /** Highlight the matched terms in a snippet, inverse-video as it was. */
@@ -144,6 +146,19 @@ export function SearchPanel() {
               </option>
             ))}
           </select>
+          {/* R8.4. Beside the box rather than behind a menu: the moment you
+              want to know about quotes and `-` is the moment you are typing. */}
+          <a
+            className="search-syntax-link"
+            href={`${DOCS_BASE}/search-syntax.md`}
+            title="Quoted phrases, exclusion, prefix matching"
+            onClick={(e) => {
+              e.preventDefault();
+              void openDocs("search-syntax.md");
+            }}
+          >
+            Syntax
+          </a>
         </div>
       </div>
 

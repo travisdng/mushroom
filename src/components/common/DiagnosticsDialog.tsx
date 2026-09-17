@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "./Button";
 import { Dialog } from "./Dialog";
 import * as diag from "../../services/diagnosticsService";
+import { openDocs } from "../../services/docs";
 import { toAppError } from "../../services/ipc";
 import { LOG_CATEGORIES, LOG_LEVELS } from "../../types/diagnostics";
 import type { Diagnostics, LogLine } from "../../types/diagnostics";
@@ -63,6 +64,10 @@ export function DiagnosticsDialog({
         <>
           <Button onClick={() => void copy()}>Copy Diagnostics</Button>
           <Button onClick={() => void diag.openLogFolder()}>Open Log Folder</Button>
+          {/* Someone who has opened Diagnostics is already looking for help. */}
+          <Button onClick={() => void openDocs("troubleshooting.md")}>
+            Troubleshooting…
+          </Button>
         </>
       }
     >
