@@ -147,9 +147,17 @@ where
             let mut debouncer = Debouncer::new();
 
             loop {
-                // Wake either when an event arrives or often enough to release
-                // whatever has gone quiet.
-                match rx.recv_timeout(DEBOUNCE) {
+                // With nothing pending there is nothing to release, so block
+                // until an event arrives rather than waking twice a second for
+                // the rest of the session — an idle app runs no timers (R5.5).
+                // With something pending, wake in time to release it.
+                let received = if debouncer.is_empty() {
+                    rx.recv().map_err(|_| RecvTimeoutError::Disconnected)
+                } else {
+                    rx.recv_timeout(DEBOUNCE)
+                };
+
+                match received {
                     Ok(Ok(event)) => {
                         let removed = matches!(event.kind, EventKind::Remove(_));
                         for path in event.paths {

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useNotes } from "../../hooks/useNotes";
@@ -11,7 +11,7 @@ import { useNotes } from "../../hooks/useNotes";
  * executing HTML from it would make Mushroom a way to run someone else's
  * markup (R5.4).
  */
-export function MarkdownPreview({ source }: { source: string }) {
+function MarkdownPreviewInner({ source }: { source: string }) {
   const { notes, openNote } = useNotes();
 
   const followLink = useCallback(
@@ -42,13 +42,23 @@ export function MarkdownPreview({ source }: { source: string }) {
   );
 
   // [[wikilinks]] are not Markdown, so rewrite them to links before parsing.
-  const prepared = source.replace(
-    /\[\[([^\]]+)\]\]/g,
-    (_, name: string) => `[${name}](${name})`,
+  const prepared = useMemo(
+    () => source.replace(/\[\[([^\]]+)\]\]/g, (_, name: string) => `[${name}](${name})`),
+    [source],
   );
 
-  return (
-    <div className="preview selectable">
+  // Memoised on the text, not on the render.
+  //
+  // The 150 ms debounce upstream stops the *text* changing on every keystroke,
+  // but not the rendering: this component reads `useNotes()`, the note body
+  // lives in that context, and a context consumer re-renders whenever the
+  // context changes — every keystroke — whatever `memo` says about its props.
+  // So react-markdown re-parsed the whole note on each key for a result
+  // identical to the last one, and the debounce was doing a third of the job
+  // it was credited with. Returning the same element reference is what
+  // actually lets React skip the subtree.
+  const rendered = useMemo(
+    () => (
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -74,6 +84,14 @@ export function MarkdownPreview({ source }: { source: string }) {
       >
         {prepared}
       </ReactMarkdown>
-    </div>
+    ),
+    // `followLink` changes only when the note *list* does, which is not
+    // something typing causes.
+    [prepared, followLink],
   );
+
+  return <div className="preview selectable">{rendered}</div>;
 }
+
+/** Also skips the render entirely when a parent re-renders for its own reasons. */
+export const MarkdownPreview = memo(MarkdownPreviewInner);

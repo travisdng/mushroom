@@ -209,7 +209,14 @@ pub fn load(data_dir: &Path) -> (AppConfig, Option<AppError>) {
         }
     };
 
-    match serde_json::from_str::<AppConfig>(&text) {
+    // Notepad and PowerShell both write UTF-8 with a byte-order mark by
+    // default, and `serde_json` rejects one. Without this, hand-editing the
+    // settings file on Windows silently resets every setting to its default:
+    // the file reads as "not valid JSON", the app starts fresh, and the only
+    // trace is a log line nobody reads.
+    let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
+
+    match serde_json::from_str::<AppConfig>(text) {
         Ok(config) => (migrate(config), None),
         Err(source) => (
             AppConfig::default(),
@@ -287,6 +294,22 @@ mod tests {
         assert!(err.is_none());
         assert_eq!(loaded.ui.sidebar_width, 333);
         assert!(loaded.ui.show_ai_panel);
+    }
+
+    #[test]
+    fn a_settings_file_with_a_byte_order_mark_still_loads() {
+        // What Notepad and `Set-Content -Encoding utf8` produce. Rejecting it
+        // silently reset everything the user had configured.
+        let dir = tempfile::tempdir().unwrap();
+        let json = r#"{"version":3,"ui":{"sidebarWidth":321}}"#;
+        std::fs::write(config_path(dir.path()), format!("\u{feff}{json}")).unwrap();
+
+        let (config, err) = load(dir.path());
+        assert!(
+            err.is_none(),
+            "a BOM must not look like a broken file: {err:?}"
+        );
+        assert_eq!(config.ui.sidebar_width, 321);
     }
 
     #[test]

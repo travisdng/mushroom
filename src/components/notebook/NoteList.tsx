@@ -1,7 +1,13 @@
+import { useMemo } from "react";
+
 import { useNotes } from "../../hooks/useNotes";
+import { useVirtualRows } from "../../hooks/useVirtualRows";
 import { EmptyState } from "../common/EmptyState";
 import { Button } from "../common/Button";
 import type { NoteMeta } from "../../types/notes";
+
+/** Both note rows and date headers are exactly this tall — see notes.css. */
+const ROW_HEIGHT = 18;
 
 /** Date header in the classic short form: "Sep 15". */
 function dayLabel(unixSeconds: number): string {
@@ -9,15 +15,30 @@ function dayLabel(unixSeconds: number): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function groupByDay(notes: NoteMeta[]): Array<[string, NoteMeta[]]> {
-  const groups = new Map<string, NoteMeta[]>();
+type Row =
+  | { kind: "group"; key: string; label: string }
+  | { kind: "note"; key: string; note: NoteMeta };
+
+/**
+ * Flatten the day grouping into one list of equal-height rows.
+ *
+ * Virtualising a nested structure means measuring; virtualising a flat one of
+ * uniform height is arithmetic.
+ */
+function toRows(notes: NoteMeta[]): Row[] {
+  const rows: Row[] = [];
+  let currentDay: string | null = null;
+
   for (const note of notes) {
-    const key = dayLabel(note.modified);
-    const bucket = groups.get(key);
-    if (bucket) bucket.push(note);
-    else groups.set(key, [note]);
+    const day = dayLabel(note.modified);
+    if (day !== currentDay) {
+      rows.push({ kind: "group", key: `day-${day}`, label: day });
+      currentDay = day;
+    }
+    rows.push({ kind: "note", key: note.id, note });
   }
-  return [...groups.entries()];
+
+  return rows;
 }
 
 export function NoteList({
@@ -28,49 +49,67 @@ export function NoteList({
   onCreate?: () => void;
 }) {
   const { notes, open, openNote } = useNotes();
+  const rows = useMemo(() => toRows(notes), [notes]);
+  const view = useVirtualRows(rows.length, ROW_HEIGHT);
 
   if (notes.length === 0) {
     return (
       <EmptyState
         text="No notes yet."
-        action={onCreate ? <Button onClick={onCreate}>Create your first note</Button> : undefined}
+        action={
+          onCreate ? (
+            <Button onClick={onCreate}>Create your first note</Button>
+          ) : undefined
+        }
       />
     );
   }
 
   return (
-    <div role="listbox" aria-label="Notes" style={{ padding: 2 }}>
-      {groupByDay(notes).map(([day, items]) => (
-        <div key={day}>
-          <div className="list-group">{day}</div>
-          {items.map((note) => (
-            <div
-              key={note.id}
-              className="list-row"
-              role="option"
-              aria-selected={open?.meta.id === note.id}
-              data-selected={open?.meta.id === note.id ? "true" : undefined}
-              tabIndex={0}
-              title={note.id}
-              onClick={() => void openNote(note.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void openNote(note.id);
-                }
-              }}
-              onContextMenu={(e) => {
-                if (!onContextMenu) return;
+    <div
+      ref={view.ref}
+      role="listbox"
+      aria-label="Notes"
+      className="note-list"
+    >
+      <div style={{ height: view.paddingTop }} />
+
+      {rows.slice(view.start, view.end).map((row) =>
+        row.kind === "group" ? (
+          <div key={row.key} className="list-group">
+            {row.label}
+          </div>
+        ) : (
+          <div
+            key={row.key}
+            className="list-row"
+            role="option"
+            aria-selected={open?.meta.id === row.note.id}
+            data-selected={open?.meta.id === row.note.id ? "true" : undefined}
+            tabIndex={0}
+            title={row.note.id}
+            onClick={() => void openNote(row.note.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
                 e.preventDefault();
-                onContextMenu(note.id, e.clientX, e.clientY);
-              }}
-            >
-              <span className="list-title">{note.title}</span>
-              {note.folder ? <span className="list-folder">{note.folder}</span> : null}
-            </div>
-          ))}
-        </div>
-      ))}
+                void openNote(row.note.id);
+              }
+            }}
+            onContextMenu={(e) => {
+              if (!onContextMenu) return;
+              e.preventDefault();
+              onContextMenu(row.note.id, e.clientX, e.clientY);
+            }}
+          >
+            <span className="list-title">{row.note.title}</span>
+            {row.note.folder ? (
+              <span className="list-folder">{row.note.folder}</span>
+            ) : null}
+          </div>
+        ),
+      )}
+
+      <div style={{ height: view.paddingBottom }} />
     </div>
   );
 }
