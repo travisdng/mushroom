@@ -135,3 +135,38 @@ describe("rankNotes", () => {
     expect(performance.now() - started).toBeLessThan(50);
   });
 });
+
+describe("ranking 5,000 notes", () => {
+  // R5: Quick Open filters in the window, on every keystroke, over the whole
+  // note list. The threshold is loose on purpose — this is here to catch a
+  // change that makes ranking quadratic, not to fail on a busy CI box.
+  const many: NoteMeta[] = Array.from({ length: 5000 }, (_, i) =>
+    note(
+      `folder-${String(i % 50).padStart(2, "0")}/note-${i}.md`,
+      `${["capacity", "latency", "dialler", "transcript", "queue"][i % 5]} note ${i}`,
+      `folder-${String(i % 50).padStart(2, "0")}`,
+    ),
+  );
+
+  it("filters well inside a keystroke", () => {
+    // The interesting queries are the ones that match a lot: a single letter
+    // matches nearly everything and still has to score and sort it.
+    const queries = ["c", "ca", "cap", "capa", "note 49", "qln", "zzzz"];
+    const timings: number[] = [];
+
+    for (const query of queries) {
+      const started = performance.now();
+      rankNotes(many, query, []);
+      timings.push(performance.now() - started);
+    }
+
+    const worst = Math.max(...timings);
+    const report = queries
+      .map((q, i) => `${q}=${timings[i]!.toFixed(1)}ms`)
+      .join(" ");
+    // eslint-disable-next-line no-console
+    console.log(`quick open over ${many.length} notes: ${report}`);
+
+    expect(worst).toBeLessThan(200);
+  });
+});
