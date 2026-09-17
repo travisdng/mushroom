@@ -1,0 +1,8 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "windows": {
+      "signCommand": "signtool sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f \"%MUSHROOM_SIGN_PFX%\" /p \"%MUSHROOM_SIGN_PASSWORD%\" \"%1\""
+    }
+  }
+}
