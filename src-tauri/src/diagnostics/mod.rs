@@ -136,7 +136,12 @@ pub fn render(diagnostics: &Diagnostics) -> String {
     out.push_str(&format!("  Tokens:         {}\n", ai.total_tokens));
     out.push_str(&format!("  Failures:       {}\n", ai.failures));
 
+    // Say what it does carry as well as what it does not. The endpoint is the
+    // single most useful line for diagnosing an AI problem, so it stays — but
+    // it can be an internal hostname, and someone about to paste this into a
+    // public issue deserves to be told rather than left to assume.
     out.push_str("\nThis report contains no note titles, note content, or API keys.\n");
+    out.push_str("It does include your configured endpoint and folder structure.\n");
     out
 }
 
@@ -232,8 +237,15 @@ mod tests {
     }
 
     #[test]
-    fn the_report_states_what_it_does_not_contain() {
+    fn the_report_states_what_it_does_and_does_not_contain() {
         let report = render(&sample());
         assert!(report.contains("no note titles"), "{report}");
+        // And honest about the endpoint, which is kept because it is the most
+        // useful line for diagnosing an AI problem.
+        assert!(
+            report.contains("does include your configured endpoint"),
+            "{report}"
+        );
+        assert!(report.contains("http://localhost:4000/v1"), "{report}");
     }
 }
