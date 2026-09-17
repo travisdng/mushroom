@@ -8,6 +8,18 @@ Add entries here as work lands. On release, move the Unreleased entries into a
 dated version section and write the matching file in
 [`docs/releases/`](docs/releases/).
 
+## [1.0.1] — 2026-09-18
+
+See [docs/releases/v1.0.1.md](docs/releases/v1.0.1.md).
+
+### Fixed
+- **The uninstaller could hang.** The "your notes are NOT removed" message
+  added in 1.0.0 was shown unconditionally, including under `/S` — where a
+  modal dialog does not annoy anyone, it hangs forever with nobody there to
+  dismiss it — and during an upgrade, which runs the old uninstaller with
+  `/UPDATE` and is not a removal at all. It now appears only for an uninstall
+  somebody started and is watching.
+
 ## [1.0.0] — 2026-09-18
 
 Milestone 06 — polish and packaging. See

@@ -8,7 +8,22 @@
 ; get someone reinstalling just to check.
 
 !macro NSIS_HOOK_PREUNINSTALL
-  ; Before anything is removed, while backing out is still free.
+  ; Only ever for an uninstall a person started and is watching.
+  ;
+  ; v1.0.0 showed this unconditionally, which was two bugs in one. `/S` is a
+  ; silent uninstall, run by deployment tooling and by scripts, and a modal
+  ; dialog in it does not annoy anyone — it hangs forever, invisibly, because
+  ; nobody is there to click OK. And installing a newer version runs the old
+  ; uninstaller with `/UPDATE`, so upgrading would have announced that your
+  ; notes were safe from a removal that was not happening.
+  ;
+  ; $UpdateMode and $PassiveMode are Tauri's, set from the command line in
+  ; un.onInit, which has already run by the time this macro is inserted.
+  ; StrCmp rather than LogicLib so this does not depend on include order.
+  IfSilent mushroom_skip_notice
+  StrCmp $UpdateMode 1 mushroom_skip_notice
+  StrCmp $PassiveMode 1 mushroom_skip_notice
+
   MessageBox MB_OKCANCEL|MB_ICONINFORMATION \
     "Uninstalling Mushroom removes the program and its shortcuts.$\r$\n$\r$\n\
 Your notes are NOT removed. They stay as Markdown files in:$\r$\n\
@@ -17,7 +32,8 @@ Your notes are NOT removed. They stay as Markdown files in:$\r$\n\
 Your settings and search index stay in:$\r$\n\
     $APPDATA\Mushroom$\r$\n$\r$\n\
 Delete those folders yourself if you want them gone." \
-    IDOK continue_uninstall
+    IDOK mushroom_skip_notice
     Abort
-  continue_uninstall:
+
+  mushroom_skip_notice:
 !macroend

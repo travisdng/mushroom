@@ -1,6 +1,6 @@
 [package]
 name = "mushroom"
-version = "1.0.0"
+version = "1.0.1"
 description = "Local-first personal knowledge and notes with AI-powered retrieval"
 authors = ["Travis Duong"]
 license = "Apache-2.0"
