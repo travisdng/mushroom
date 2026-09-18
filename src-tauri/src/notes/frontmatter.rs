@@ -124,16 +124,8 @@ fn parse_block(raw: &str) -> Frontmatter {
             // Two spellings because both are the obvious one to somebody, and
             // a privacy control that only works if you guessed the right word
             // is not a privacy control.
-            "ai" => {
-                if is_false(value) {
-                    fm.ai_excluded = true;
-                }
-            }
-            "private" => {
-                if is_true(value) {
-                    fm.ai_excluded = true;
-                }
-            }
+            "ai" if is_false(value) => fm.ai_excluded = true,
+            "private" if is_true(value) => fm.ai_excluded = true,
             _ => {}
         }
     }
