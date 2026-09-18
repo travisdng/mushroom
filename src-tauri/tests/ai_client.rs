@@ -856,3 +856,52 @@ async fn test_connection_sends_nothing_but_its_own_ping() {
     // A connectivity check has no business asking for a completion either.
     assert_eq!(sent["max_tokens"].as_u64(), Some(1), "{sent}");
 }
+
+/// Fail closed: when the gate cannot run, nothing goes on the wire.
+///
+/// The unit tests prove `sanitise` refuses. This proves the refusal happens
+/// *before* the HTTP call rather than after it — which is the half that
+/// actually protects anything, and the half a reordered line could break
+/// without any unit test noticing.
+#[tokio::test]
+async fn a_broken_privacy_gate_sends_nothing_at_all() {
+    use mushroom_lib::ai::privacy::Rules;
+    use mushroom_lib::ai::service::AiService;
+
+    let server = MockServer::start().await;
+    mount_chat(
+        &server,
+        ResponseTemplate::new(200).set_body_json(completion_body("leaked")),
+    )
+    .await;
+
+    let service = AiService::with_rules(
+        AiConfig {
+            configured: true,
+            ..config_for(&server)
+        },
+        Rules::broken("the rule table did not load"),
+    );
+
+    let err = service
+        .chat(
+            ChatRequest {
+                model: "test-model".into(),
+                messages: vec![Message::user("the password is hunter2")],
+                temperature: None,
+                max_tokens: None,
+            },
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap_err();
+
+    assert!(
+        matches!(err, AiError::Privacy { .. }),
+        "expected a privacy failure, got {err:?}"
+    );
+    assert!(
+        server.received_requests().await.unwrap().is_empty(),
+        "the gate failed, so the endpoint must have seen nothing at all"
+    );
+}

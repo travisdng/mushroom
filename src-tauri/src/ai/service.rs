@@ -11,7 +11,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::ai::client::{AiClient, StreamSink};
 use crate::ai::error::AiError;
-use crate::ai::privacy::{self, Policy, PrivacyReport, SanitisedRequest};
+use crate::ai::privacy::{self, Policy, PrivacyReport, Rules, SanitisedRequest};
 use crate::ai::provider::{ChatRequest, ChatResponse, ConnectionInfo};
 use crate::config::{secrets, AiConfig};
 
@@ -33,14 +33,27 @@ pub struct AiService {
     /// `None` when the settings cannot produce a usable client.
     client: RwLock<Option<Arc<AiClient>>>,
     last_connection: Mutex<Option<LastConnection>>,
+    /// Compiled once, here, rather than per request (spec 08 R7.2).
+    rules: Rules,
 }
 
 impl AiService {
     pub fn new(config: AiConfig) -> Self {
+        Self::with_rules(config, Rules::builtin())
+    }
+
+    /// Build with a specific rule set.
+    ///
+    /// Public because a rule set is configuration, not a secret, and because
+    /// task 18 lets the user disable individual rules. Note the direction of
+    /// travel: a rule set passed here can only make the gate stricter or make
+    /// it refuse — there is no value of `Rules` that makes it send more.
+    pub fn with_rules(config: AiConfig, rules: Rules) -> Self {
         let service = Self {
             config: Mutex::new(config),
             client: RwLock::new(None),
             last_connection: Mutex::new(None),
+            rules,
         };
         service.rebuild();
         service
@@ -104,7 +117,7 @@ impl AiService {
     /// Read per request rather than cached, so a mode changed in Settings
     /// takes effect on the next question rather than the next launch.
     fn policy(&self) -> Policy {
-        Policy::new(self.config().privacy_mode)
+        Policy::with_rules(self.config().privacy_mode, self.rules.clone())
     }
 
     /// A one-shot completion, with the usage line written for it.

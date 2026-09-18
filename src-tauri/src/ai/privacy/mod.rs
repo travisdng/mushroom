@@ -20,7 +20,11 @@
 //! `.kiro/steering/ai-integration.md`, and it matters: exclusion is complete,
 //! detection is best-effort, and no screen may claim Mushroom removes secrets.
 
+pub mod rules;
+
 use serde::{Deserialize, Serialize};
+
+pub use rules::{RuleSet, Rules};
 
 use crate::ai::provider::ChatRequest;
 
@@ -117,11 +121,21 @@ impl PrivacyReport {
 #[derive(Debug, Clone, Default)]
 pub struct Policy {
     pub mode: PrivacyMode,
+    pub rules: Rules,
 }
 
 impl Policy {
     pub fn new(mode: PrivacyMode) -> Self {
-        Self { mode }
+        Self {
+            mode,
+            rules: Rules::builtin(),
+        }
+    }
+
+    /// A policy with a specific rule set, for tests and for a future Settings
+    /// screen that can disable individual rules (task 18).
+    pub fn with_rules(mode: PrivacyMode, rules: Rules) -> Self {
+        Self { mode, rules }
     }
 }
 
@@ -170,6 +184,12 @@ impl SanitisedRequest {
 /// arrives with the rule set; the guarantee that every path comes through here
 /// arrives now.
 pub fn sanitise(request: ChatRequest, policy: &Policy) -> Result<SanitisedRequest, PrivacyError> {
+    // Before anything else, and deliberately even in `PrivacyMode::Off`: a
+    // rule set that failed to load means Mushroom does not know what it is
+    // about to send. `Off` is consent to skip *scanning*, not consent to send
+    // blind because the scanner is broken.
+    let _rules = policy.rules.ready()?;
+
     Ok(SanitisedRequest {
         inner: request,
         report: PrivacyReport::clean(policy.mode),
@@ -251,6 +271,40 @@ mod tests {
         };
         assert!(!report.is_clean());
         assert_eq!(report.redacted_count(), 3);
+    }
+
+    #[test]
+    fn a_broken_rule_set_stops_the_request_dead() {
+        // The point of the gate: when it cannot tell what it is about to
+        // send, it does not send it (R1.5, R8.2).
+        let policy =
+            Policy::with_rules(PrivacyMode::Redact, Rules::broken("the table did not load"));
+        let err = sanitise(request(), &policy).unwrap_err();
+        assert!(matches!(err, PrivacyError::Rules { .. }));
+    }
+
+    #[test]
+    fn a_broken_rule_set_stops_the_request_even_with_privacy_off() {
+        // `Off` is consent to skip scanning, not consent to send blind
+        // because the scanner is broken. Those are different things, and
+        // conflating them would make the one mode people pick under pressure
+        // the one mode with no floor.
+        let policy = Policy::with_rules(PrivacyMode::Off, Rules::broken("the table did not load"));
+        assert!(sanitise(request(), &policy).is_err());
+    }
+
+    #[test]
+    fn the_failure_says_what_went_wrong_without_leaking_the_request() {
+        let policy = Policy::with_rules(
+            PrivacyMode::Redact,
+            Rules::broken("rule aws-access-key is not a valid pattern"),
+        );
+        let message = sanitise(request(), &policy).unwrap_err().to_string();
+        assert!(message.contains("aws-access-key"), "{message}");
+        assert!(
+            !message.contains("GPU nodes"),
+            "the request must not appear in the error: {message}"
+        );
     }
 
     #[test]
