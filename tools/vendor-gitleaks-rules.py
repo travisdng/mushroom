@@ -55,6 +55,25 @@ REWRITES = {
     "vault-batch-token": (r"{138,300}", r"{138,}"),
 }
 
+# The single most consequential difference between scanning code and scanning
+# prose.
+#
+# 151 of the 220 rules end with a group asserting the token is followed by a
+# quote, whitespace, a semicolon or end-of-input. That is what a credential
+# looks like in source: quoted, assigned, or on its own line. In a sentence it
+# is followed by a full stop or a comma --
+#
+#     the maps lookup used AIzaSyD1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P.
+#
+# -- and every one of those 151 rules silently declines to match. This was
+# found by the leak harness, which caught exactly one credential escaping after
+# the rest were redacted, and the reason generalised to two thirds of the set.
+#
+# The group's purpose is "the token ends here", not "the token is quoted", so
+# the fix is to say where a token can end in prose as well as in code.
+DELIMITER_FROM = "(?:[" + chr(92) + "x60" + chr(39) + chr(34) + chr(92) + "s;]|" + chr(92)*2 + "[nr]|$)"
+DELIMITER_TO = "(?:[" + chr(92) + "x60" + chr(39) + chr(34) + chr(92) + "s;,.!?)" + chr(92) + "]}]|" + chr(92)*2 + "[nr]|$)"
+
 # Rust's regex crate rejects these outright; Go's regexp has no syntax for them
 # either, so finding one means upstream changed engines and every assumption
 # here needs revisiting.
@@ -156,6 +175,11 @@ def main() -> int:
                 )
                 return 1
 
+        delimiter_fixed = False
+        if DELIMITER_FROM in pattern:
+            pattern = pattern.replace(DELIMITER_FROM, DELIMITER_TO)
+            delimiter_fixed = True
+
         rewritten = None
         if rule_id in REWRITES:
             old, new = REWRITES[rule_id]
@@ -169,7 +193,9 @@ def main() -> int:
             pattern = pattern.replace(old, new)
             rewritten = f"{old} -> {new}"
 
-        kept.append((rule_id, pattern, rule.get("entropy"), rule.get("keywords", []), rewritten))
+        kept.append(
+            (rule_id, pattern, rule.get("entropy"), rule.get("keywords", []), rewritten, delimiter_fixed)
+        )
 
     kept.sort(key=lambda r: r[0])
 
@@ -182,10 +208,12 @@ def main() -> int:
         )
     ]
 
-    for rule_id, pattern, entropy, keywords, rewritten in kept:
+    for rule_id, pattern, entropy, keywords, rewritten, delimiter_fixed in kept:
         lines.append("    Rule {")
         if rewritten:
             lines.append(f"        // Bound widened for Rust: {rewritten}")
+        if delimiter_fixed:
+            lines.append("        // Trailing delimiter widened for prose: see the generator.")
         lines.append(f'        name: "{rule_id}",')
         lines.append(f"        pattern: {rust_string(pattern)},")
         # Gitleaks entropy is a confidence floor on the matched text. Rules
@@ -209,10 +237,12 @@ def main() -> int:
     args.out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
     rewrote = [r[0] for r in kept if r[4]]
+    delimited = [r[0] for r in kept if r[5]]
     print(
         f"wrote {args.out}: {len(kept)} rules, "
         f"dropped {len(dropped)} ({', '.join(dropped) or 'none'}), "
-        f"bounds widened for {len(rewrote)} ({', '.join(rewrote) or 'none'})"
+        f"bounds widened for {len(rewrote)} ({', '.join(rewrote) or 'none'}), "
+        f"trailing delimiter widened for {len(delimited)}"
     )
     return 0
 

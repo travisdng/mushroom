@@ -21,6 +21,7 @@
 //! detection is best-effort, and no screen may claim Mushroom removes secrets.
 
 pub mod gitleaks_rules;
+pub mod redact;
 pub mod rules;
 
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,7 @@ use serde::{Deserialize, Serialize};
 pub use crate::exclusion::{ExclusionRule, Exclusions};
 pub use rules::{RuleSet, Rules};
 
-use crate::ai::provider::ChatRequest;
+use crate::ai::provider::{ChatRequest, Message, Role};
 
 /// The seal.
 ///
@@ -208,7 +209,7 @@ pub fn sanitise(request: ChatRequest, policy: &Policy) -> Result<SanitisedReques
     // rule set that failed to load means Mushroom does not know what it is
     // about to send. `Off` is consent to skip *scanning*, not consent to send
     // blind because the scanner is broken.
-    let _rules = policy.rules.ready()?;
+    let rules = policy.rules.ready()?;
 
     // Retrieval already filtered these out, so reaching here means a bug
     // upstream — a new retrieval path that forgot, most likely. Refuse the
@@ -232,11 +233,71 @@ pub fn sanitise(request: ChatRequest, policy: &Policy) -> Result<SanitisedReques
         }
     }
 
+    // `Off` is consent to skip the guessing layer. Exclusion above still
+    // applied, and still applies, because that is the user's own instruction
+    // rather than something Mushroom inferred.
+    if policy.mode == PrivacyMode::Off {
+        return Ok(SanitisedRequest {
+            inner: request,
+            report: PrivacyReport::clean(policy.mode),
+            _seal: Seal,
+        });
+    }
+
+    let mut report = PrivacyReport::clean(policy.mode);
+    let mut messages = Vec::with_capacity(request.messages.len());
+
+    for message in request.messages {
+        match policy.mode {
+            PrivacyMode::Off => unreachable!("handled above"),
+            PrivacyMode::Redact => {
+                let done = redact::redact(&message.content, rules)?;
+                for found in done.redactions {
+                    match report.redactions.iter_mut().find(|r| r.rule == found.rule) {
+                        Some(existing) => existing.count += found.count,
+                        None => report.redactions.push(found),
+                    }
+                }
+                messages.push(Message {
+                    role: message.role,
+                    content: done.text,
+                });
+            }
+            PrivacyMode::Block => {
+                // Withhold the whole message rather than editing it. The user
+                // chose to lose the context rather than trust the marker.
+                match redact::contains_secret(&message.content, rules)? {
+                    Some(rule) => report.withheld.push(Withheld {
+                        kind: describe(&message.role),
+                        rule,
+                    }),
+                    None => messages.push(message),
+                }
+            }
+        }
+    }
+
+    report.redactions.sort_by(|a, b| a.rule.cmp(&b.rule));
+
     Ok(SanitisedRequest {
-        inner: request,
-        report: PrivacyReport::clean(policy.mode),
+        inner: ChatRequest {
+            messages,
+            ..request
+        },
+        report,
         _seal: Seal,
     })
+}
+
+/// What kind of thing was withheld, for the notice the user reads.
+fn describe(role: &Role) -> String {
+    match role {
+        // The excerpts live in the system prompt, and "system prompt" is not
+        // a phrase anybody outside this codebase should have to read.
+        Role::System => "note excerpt".to_string(),
+        Role::User => "your message".to_string(),
+        Role::Assistant => "earlier reply".to_string(),
+    }
 }
 
 #[cfg(test)]

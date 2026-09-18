@@ -40,8 +40,11 @@ struct Planted {
 
 /// One of each supported kind, in shapes real scanners recognise.
 ///
-/// These are syntactically valid and entirely fabricated — `AK1AQYRZ5TMK7VW3XJ42`
-/// is AWS's own documentation placeholder. Nothing here is or ever was live.
+/// All syntactically valid and entirely fabricated, and deliberately **not**
+/// the well-known documentation placeholders: `AK1AIOSFODNN7EXAMPLE` and its
+/// kind contain the word EXAMPLE, which `is_placeholder` skips on purpose, so
+/// a fixture built from one would prove nothing. Nothing here is or ever was a
+/// live credential.
 const PLANTED: &[Planted] = &[
     Planted {
         rule: "aws-access-key",
@@ -194,24 +197,32 @@ fn assert_nothing_leaked(bodies: &Bodies) {
         "nothing was sent at all, so this proves nothing \u{2014} check the question still retrieves"
     );
 
-    let mut leaked: Vec<&str> = Vec::new();
+    let mut leaked: Vec<String> = Vec::new();
     for planted in PLANTED {
-        if sent.iter().any(|body| body.contains(planted.value)) {
-            leaked.push(planted.rule);
+        for body in sent.iter() {
+            let Some(at) = body.find(planted.value) else {
+                continue;
+            };
+            // Show the surrounding text. "something leaked" is not actionable;
+            // "it leaked from here, looking like this" is.
+            let from = at.saturating_sub(100);
+            let to = (at + planted.value.len() + 60).min(body.len());
+            leaked.push(format!(
+                "{}\n      …{}…",
+                planted.rule,
+                body[from..to].replace("\\n", " ")
+            ));
+            break;
         }
     }
 
     assert!(
         leaked.is_empty(),
-        "these credentials reached the endpoint: {leaked:?}\n\
-         Each name is the rule that should have caught it."
+        "these credentials reached the endpoint:\n    {}",
+        leaked.join("\n    ")
     );
 }
 
-// Ignored until task 13 vendors the rule table and task 15 applies it. This
-// test FAILS today, correctly: it is the proof that the exposure is real, not
-// a hypothesis. Run it with `cargo test --test privacy_leak -- --ignored`.
-#[ignore = "fails until the rule table lands (task 13) and redaction applies it (task 15)"]
 #[tokio::test]
 async fn planted_credentials_never_reach_the_endpoint() {
     let (_dir, root, db) = corpus();

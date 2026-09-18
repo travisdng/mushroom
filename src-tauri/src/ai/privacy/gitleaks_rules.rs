@@ -51,20 +51,23 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["ops_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "adafruit-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:adafruit)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:adafruit)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["adafruit"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "adobe-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:adobe)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:adobe)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["adobe"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "adobe-client-secret",
-        pattern: r#"\b(p8e-(?i)[a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(p8e-(?i)[a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["p8e-"],
     },
@@ -75,8 +78,9 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["age-secret-key-1"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "airtable-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:airtable)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{17})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:airtable)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{17})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["airtable"],
     },
@@ -87,32 +91,37 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["airtable"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "algolia-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:algolia)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:algolia)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["algolia"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "alibaba-access-key-id",
-        pattern: r#"\b(LTAI(?i)[a-z0-9]{20})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(LTAI(?i)[a-z0-9]{20})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["ltai"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "alibaba-secret-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:alibaba)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{30})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:alibaba)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{30})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["alibaba"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "anthropic-admin-api-key",
-        pattern: r#"\b(sk-ant-admin01-[a-zA-Z0-9_\-]{93}AA)(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(sk-ant-admin01-[a-zA-Z0-9_\-]{93}AA)(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["sk-ant-admin01"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "anthropic-api-key",
-        pattern: r#"\b(sk-ant-api03-[a-zA-Z0-9_\-]{93}AA)(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(sk-ant-api03-[a-zA-Z0-9_\-]{93}AA)(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["sk-ant-api03"],
     },
@@ -129,26 +138,30 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["cmvmd"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "asana-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:asana)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{16})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:asana)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{16})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["asana"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "asana-client-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:asana)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:asana)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["asana"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "atlassian-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:(?-i:ATLASSIAN|[Aa]tlassian)|(?-i:CONFLUENCE|[Cc]onfluence)|(?-i:JIRA|[Jj]ira))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20}[a-f0-9]{4})(?:[\x60'"\s;]|\\[nr]|$)|\b(ATATT3[A-Za-z0-9_\-=]{186})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:(?-i:ATLASSIAN|[Aa]tlassian)|(?-i:CONFLUENCE|[Cc]onfluence)|(?-i:JIRA|[Jj]ira))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20}[a-f0-9]{4})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)|\b(ATATT3[A-Za-z0-9_\-=]{186})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.5),
         keywords: &["atlassian", "confluence", "jira", "atatt3"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "authress-service-client-access-key",
-        pattern: r#"\b((?:sc|ext|scauth|authress)_(?i)[a-z0-9]{5,30}\.[a-z0-9]{4,6}\.(?-i:acc)[_-][a-z0-9-]{10,32}\.[a-z0-9+/_=-]{30,120})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b((?:sc|ext|scauth|authress)_(?i)[a-z0-9]{5,30}\.[a-z0-9]{4,6}\.(?-i:acc)[_-][a-z0-9-]{10,32}\.[a-z0-9+/_=-]{30,120})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["sc_", "ext_", "scauth_", "authress_"],
     },
@@ -159,8 +172,9 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["a3t", "akia", "asia", "abia", "acca"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "aws-amazon-bedrock-api-key-long-lived",
-        pattern: r#"\b(ABSK[A-Za-z0-9+/]{109,269}={0,2})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(ABSK[A-Za-z0-9+/]{109,269}={0,2})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["absk"],
     },
@@ -177,38 +191,44 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["q~"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "beamer-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:beamer)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(b_[a-z0-9=_\-]{44})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:beamer)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(b_[a-z0-9=_\-]{44})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["beamer"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "bitbucket-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:bitbucket)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:bitbucket)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["bitbucket"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "bitbucket-client-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:bitbucket)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:bitbucket)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["bitbucket"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "bittrex-access-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:bittrex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:bittrex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["bittrex"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "bittrex-secret-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:bittrex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:bittrex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["bittrex"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "cisco-meraki-api-key",
-        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:(?-i:[Mm]eraki|MERAKI))(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:(?-i:[Mm]eraki|MERAKI))(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["meraki"],
     },
@@ -225,56 +245,65 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["clojars_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "cloudflare-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:cloudflare)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:cloudflare)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["cloudflare"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "cloudflare-global-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:cloudflare)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{37})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:cloudflare)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{37})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["cloudflare"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "cloudflare-origin-ca-key",
-        pattern: r#"\b(v1\.0-[a-f0-9]{24}-[a-f0-9]{146})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(v1\.0-[a-f0-9]{24}-[a-f0-9]{146})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["cloudflare", "v1.0-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "codecov-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:codecov)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:codecov)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["codecov"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "cohere-api-token",
-        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:cohere|CO_API_KEY)(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-zA-Z0-9]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:cohere|CO_API_KEY)(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-zA-Z0-9]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["cohere", "co_api_key"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "coinbase-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:coinbase)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:coinbase)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["coinbase"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "confluent-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:confluent)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{16})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:confluent)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{16})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["confluent"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "confluent-secret-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:confluent)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:confluent)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["confluent"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "contentful-delivery-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:contentful)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{43})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:contentful)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{43})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["contentful"],
     },
@@ -291,56 +320,65 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["curl"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "databricks-api-token",
-        pattern: r#"\b(dapi[a-f0-9]{32}(?:-\d)?)(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(dapi[a-f0-9]{32}(?:-\d)?)(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["dapi"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "datadog-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:datadog)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:datadog)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["datadog"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "defined-networking-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:dnkey)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(dnkey-[a-z0-9=_\-]{26}-[a-z0-9=_\-]{52})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:dnkey)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(dnkey-[a-z0-9=_\-]{26}-[a-z0-9=_\-]{52})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["dnkey"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "digitalocean-access-token",
-        pattern: r#"\b(doo_v1_[a-f0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(doo_v1_[a-f0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["doo_v1_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "digitalocean-pat",
-        pattern: r#"\b(dop_v1_[a-f0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(dop_v1_[a-f0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["dop_v1_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "digitalocean-refresh-token",
-        pattern: r#"(?i)\b(dor_v1_[a-f0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(dor_v1_[a-f0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["dor_v1_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "discord-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:discord)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:discord)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["discord"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "discord-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:discord)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{18})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:discord)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{18})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["discord"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "discord-client-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:discord)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:discord)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["discord"],
     },
@@ -351,26 +389,30 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["dp.pt."],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "droneci-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:droneci)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:droneci)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["droneci"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "dropbox-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:dropbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{15})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:dropbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{15})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["dropbox"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "dropbox-long-lived-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:dropbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{11}(AAAAAAAAAA)[a-z0-9\-_=]{43})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:dropbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{11}(AAAAAAAAAA)[a-z0-9\-_=]{43})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["dropbox"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "dropbox-short-lived-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:dropbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(sl\.[a-z0-9\-=_]{135})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:dropbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(sl\.[a-z0-9\-=_]{135})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["dropbox"],
     },
@@ -399,56 +441,65 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["eztk"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "etsy-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:(?-i:ETSY|[Ee]tsy))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{24})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:(?-i:ETSY|[Ee]tsy))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{24})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["etsy"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "facebook-access-token",
-        pattern: r#"(?i)\b(\d{15,16}(\||%)[0-9a-z\-_]{27,40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(\d{15,16}(\||%)[0-9a-z\-_]{27,40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["facebook"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "facebook-page-access-token",
-        pattern: r#"\b(EAA[MC](?i)[a-z0-9]{100,})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(EAA[MC](?i)[a-z0-9]{100,})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["eaam", "eaac"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "facebook-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:facebook)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:facebook)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["facebook"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "fastly-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:fastly)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:fastly)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["fastly"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "finicity-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:finicity)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:finicity)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["finicity"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "finicity-client-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:finicity)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:finicity)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["finicity"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "finnhub-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:finnhub)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:finnhub)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["finnhub"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "flickr-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:flickr)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:flickr)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["flickr"],
     },
@@ -471,8 +522,9 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["flwseck_test"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "flyio-access-token",
-        pattern: r#"\b((?:fo1_[\w-]{43}|fm1[ar]_[a-zA-Z0-9+\/]{100,}={0,3}|fm2_[a-zA-Z0-9+\/]{100,}={0,3}))(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b((?:fo1_[\w-]{43}|fm1[ar]_[a-zA-Z0-9+\/]{100,}={0,3}|fm2_[a-zA-Z0-9+\/]{100,}={0,3}))(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["fo1_", "fm1", "fm2_"],
     },
@@ -489,14 +541,16 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["secret_key"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "freshbooks-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:freshbooks)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:freshbooks)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["freshbooks"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "gcp-api-key",
-        pattern: r#"\b(AIza[\w-]{35})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(AIza[\w-]{35})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["aiza"],
     },
@@ -621,32 +675,37 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["_gitlab_session="],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "gitter-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:gitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:gitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["gitter"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "gocardless-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:gocardless)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(live_(?i)[a-z0-9\-_=]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:gocardless)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(live_(?i)[a-z0-9\-_=]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["live_", "gocardless"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "grafana-api-key",
-        pattern: r#"(?i)\b(eyJrIjoi[A-Za-z0-9]{70,400}={0,3})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(eyJrIjoi[A-Za-z0-9]{70,400}={0,3})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["eyjrijoi"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "grafana-cloud-api-token",
-        pattern: r#"(?i)\b(glc_[A-Za-z0-9+/]{32,400}={0,3})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(glc_[A-Za-z0-9+/]{32,400}={0,3})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["glc_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "grafana-service-account-token",
-        pattern: r#"(?i)\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["glsa_"],
     },
@@ -663,74 +722,86 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["atlasv1"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "hashicorp-tf-password",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:administrator_login_password|password)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}("[a-z0-9=_\-]{8,20}")(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:administrator_login_password|password)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}("[a-z0-9=_\-]{8,20}")(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["administrator_login_password", "password"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "heroku-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:heroku)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:heroku)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["heroku"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "heroku-api-key-v2",
-        pattern: r#"\b((HRKU-AA[0-9a-zA-Z_-]{58}))(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b((HRKU-AA[0-9a-zA-Z_-]{58}))(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["hrku-aa"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "hubspot-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:hubspot)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:hubspot)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["hubspot"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "huggingface-access-token",
-        pattern: r#"\b(hf_(?i:[a-z]{34}))(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(hf_(?i:[a-z]{34}))(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["hf_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "huggingface-organization-api-token",
-        pattern: r#"\b(api_org_(?i:[a-z]{34}))(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(api_org_(?i:[a-z]{34}))(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["api_org_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "infracost-api-token",
-        pattern: r#"\b(ico-[a-zA-Z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(ico-[a-zA-Z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["ico-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "intercom-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:intercom)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{60})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:intercom)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{60})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["intercom"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "intra42-client-secret",
-        pattern: r#"\b(s-s4t2(?:ud|af)-(?i)[abcdef0123456789]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(s-s4t2(?:ud|af)-(?i)[abcdef0123456789]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["intra", "s-s4t2ud-", "s-s4t2af-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "jfrog-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:jfrog|artifactory|bintray|xray)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{73})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:jfrog|artifactory|bintray|xray)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{73})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["jfrog", "artifactory", "bintray", "xray"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "jfrog-identity-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:jfrog|artifactory|bintray|xray)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:jfrog|artifactory|bintray|xray)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["jfrog", "artifactory", "bintray", "xray"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "jwt",
-        pattern: r#"\b(ey[a-zA-Z0-9]{17,}\.ey[a-zA-Z0-9\/\\_-]{17,}\.(?:[a-zA-Z0-9\/\\_-]{10,}={0,2})?)(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(ey[a-zA-Z0-9]{17,}\.ey[a-zA-Z0-9\/\\_-]{17,}\.(?:[a-zA-Z0-9\/\\_-]{10,}={0,2})?)(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["ey"],
     },
@@ -741,8 +812,9 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["zxlk"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "kraken-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:kraken)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9\/=_\+\-]{80,90})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:kraken)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9\/=_\+\-]{80,90})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["kraken"],
     },
@@ -753,20 +825,23 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["secret"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "kucoin-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:kucoin)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{24})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:kucoin)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{24})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["kucoin"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "kucoin-secret-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:kucoin)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:kucoin)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["kucoin"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "launchdarkly-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:launchdarkly)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:launchdarkly)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["launchdarkly"],
     },
@@ -777,98 +852,114 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["lin_api_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "linear-client-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:linear)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:linear)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["linear"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "linkedin-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:linked[_-]?in)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{14})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:linked[_-]?in)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{14})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["linkedin", "linked_in", "linked-in"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "linkedin-client-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:linked[_-]?in)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{16})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:linked[_-]?in)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{16})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["linkedin", "linked_in", "linked-in"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "lob-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:lob)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}((live|test)_[a-f0-9]{35})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:lob)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}((live|test)_[a-f0-9]{35})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["test_", "live_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "lob-pub-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:lob)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}((test|live)_pub_[a-f0-9]{31})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:lob)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}((test|live)_pub_[a-f0-9]{31})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["test_pub", "live_pub", "_pub"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "looker-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:looker)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:looker)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{20})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["looker"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "looker-client-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:looker)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{24})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:looker)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{24})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["looker"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "mailchimp-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:MailchimpSDK.initialize|mailchimp)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32}-us\d\d)(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:MailchimpSDK.initialize|mailchimp)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{32}-us\d\d)(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["mailchimp"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "mailgun-private-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:mailgun)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(key-[a-f0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:mailgun)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(key-[a-f0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["mailgun"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "mailgun-pub-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:mailgun)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(pubkey-[a-f0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:mailgun)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(pubkey-[a-f0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["mailgun"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "mailgun-signing-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:mailgun)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-h0-9]{32}-[a-h0-9]{8}-[a-h0-9]{8})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:mailgun)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-h0-9]{32}-[a-h0-9]{8}-[a-h0-9]{8})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["mailgun"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "mapbox-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:mapbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(pk\.[a-z0-9]{60}\.[a-z0-9]{22})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:mapbox)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(pk\.[a-z0-9]{60}\.[a-z0-9]{22})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["mapbox"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "mattermost-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:mattermost)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{26})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:mattermost)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{26})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["mattermost"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "maxmind-license-key",
-        pattern: r#"\b([A-Za-z0-9]{6}_[A-Za-z0-9]{29}_mmk)(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b([A-Za-z0-9]{6}_[A-Za-z0-9]{29}_mmk)(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["_mmk"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "messagebird-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:message[_-]?bird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{25})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:message[_-]?bird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{25})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["messagebird", "message-bird", "message_bird"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "messagebird-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:message[_-]?bird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:message[_-]?bird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["messagebird", "message-bird", "message_bird"],
     },
@@ -879,44 +970,51 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["webhook.office.com", "webhookb2", "incomingwebhook"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "netlify-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:netlify)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{40,46})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:netlify)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{40,46})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["netlify"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "new-relic-browser-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(NRJS-[a-f0-9]{19})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(NRJS-[a-f0-9]{19})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["nrjs-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "new-relic-insert-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(NRII-[a-z0-9-]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(NRII-[a-z0-9-]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["nrii-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "new-relic-user-api-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["new-relic", "newrelic", "new_relic"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "new-relic-user-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(NRAK-[a-z0-9]{27})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(NRAK-[a-z0-9]{27})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["nrak"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "notion-api-token",
-        pattern: r#"\b(ntn_[0-9]{11}[A-Za-z0-9]{32}[A-Za-z0-9]{3})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(ntn_[0-9]{11}[A-Za-z0-9]{32}[A-Za-z0-9]{3})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["ntn_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "npm-access-token",
-        pattern: r#"(?i)\b(npm_[a-z0-9]{36})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(npm_[a-z0-9]{36})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["npm_"],
     },
@@ -927,26 +1025,30 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["<add key="],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "nytimes-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:nytimes|new-york-times,|newyorktimes)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:nytimes|new-york-times,|newyorktimes)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9=_\-]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["nytimes", "new-york-times", "newyorktimes"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "octopus-deploy-api-key",
-        pattern: r#"\b(API-[A-Z0-9]{26})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(API-[A-Z0-9]{26})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["api-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "okta-access-token",
-        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:(?-i:[Oo]kta|OKTA))(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(00[\w=\-]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:(?-i:[Oo]kta|OKTA))(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(00[\w=\-]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["okta"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "openai-api-key",
-        pattern: r#"\b(sk-(?:proj|svcacct|admin)-(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})T3BlbkFJ(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})\b|sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(sk-(?:proj|svcacct|admin)-(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})T3BlbkFJ(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})\b|sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["t3blbkfj"],
     },
@@ -963,50 +1065,58 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["pplx-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "plaid-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:plaid)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(access-(?:sandbox|development|production)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:plaid)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(access-(?:sandbox|development|production)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["plaid"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "plaid-client-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:plaid)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{24})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:plaid)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{24})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.5),
         keywords: &["plaid"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "plaid-secret-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:plaid)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{30})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:plaid)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{30})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.5),
         keywords: &["plaid"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "planetscale-api-token",
-        pattern: r#"\b(pscale_tkn_(?i)[\w=\.-]{32,64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(pscale_tkn_(?i)[\w=\.-]{32,64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["pscale_tkn_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "planetscale-oauth-token",
-        pattern: r#"\b(pscale_oauth_[\w=\.-]{32,64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(pscale_oauth_[\w=\.-]{32,64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["pscale_oauth_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "planetscale-password",
-        pattern: r#"(?i)\b(pscale_pw_(?i)[\w=\.-]{32,64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(pscale_pw_(?i)[\w=\.-]{32,64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["pscale_pw_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "postman-api-token",
-        pattern: r#"\b(PMAK-(?i)[a-f0-9]{24}\-[a-f0-9]{34})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(PMAK-(?i)[a-f0-9]{24}\-[a-f0-9]{34})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["pmak-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "prefect-api-token",
-        pattern: r#"\b(pnu_[a-zA-Z0-9]{36})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(pnu_[a-zA-Z0-9]{36})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["pnu_"],
     },
@@ -1017,14 +1127,16 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["-----begin"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "privateai-api-token",
-        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:private[_-]?ai)(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:private[_-]?ai)(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{32})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["privateai", "private_ai", "private-ai"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "pulumi-api-token",
-        pattern: r#"\b(pul-[a-f0-9]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(pul-[a-f0-9]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["pul-"],
     },
@@ -1036,56 +1148,65 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["pypi-ageichlwas5vcmc"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "rapidapi-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:rapidapi)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{50})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:rapidapi)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9_-]{50})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["rapidapi"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "readme-api-token",
-        pattern: r#"\b(rdme_[a-z0-9]{70})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(rdme_[a-z0-9]{70})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["rdme_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "rubygems-api-token",
-        pattern: r#"\b(rubygems_[a-f0-9]{48})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(rubygems_[a-f0-9]{48})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["rubygems_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "scalingo-api-token",
-        pattern: r#"\b(tk-us-[\w-]{48})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(tk-us-[\w-]{48})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["tk-us-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sendbird-access-id",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:sendbird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:sendbird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["sendbird"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sendbird-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:sendbird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:sendbird)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["sendbird"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sendgrid-api-token",
-        pattern: r#"\b(SG\.(?i)[a-z0-9=_\-\.]{66})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(SG\.(?i)[a-z0-9=_\-\.]{66})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["sg."],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sendinblue-api-token",
-        pattern: r#"\b(xkeysib-[a-f0-9]{64}\-(?i)[a-z0-9]{16})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(xkeysib-[a-f0-9]{64}\-(?i)[a-z0-9]{16})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["xkeysib-"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sentry-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:sentry)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:sentry)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["sentry"],
     },
@@ -1096,32 +1217,37 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["sntrys_eyjpyxqio"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sentry-user-token",
-        pattern: r#"\b(sntryu_[a-f0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(sntryu_[a-f0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.5),
         keywords: &["sntryu_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "settlemint-application-access-token",
-        pattern: r#"\b(sm_aat_[a-zA-Z0-9]{16})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(sm_aat_[a-zA-Z0-9]{16})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["sm_aat"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "settlemint-personal-access-token",
-        pattern: r#"\b(sm_pat_[a-zA-Z0-9]{16})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(sm_pat_[a-zA-Z0-9]{16})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["sm_pat"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "settlemint-service-access-token",
-        pattern: r#"\b(sm_sat_[a-zA-Z0-9]{16})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(sm_sat_[a-zA-Z0-9]{16})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["sm_sat"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "shippo-api-token",
-        pattern: r#"\b(shippo_(?:live|test)_[a-fA-F0-9]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(shippo_(?:live|test)_[a-fA-F0-9]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["shippo_"],
     },
@@ -1150,8 +1276,9 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["shpss_"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sidekiq-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:BUNDLE_ENTERPRISE__CONTRIBSYS__COM|BUNDLE_GEMS__CONTRIBSYS__COM)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{8}:[a-f0-9]{8})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:BUNDLE_ENTERPRISE__CONTRIBSYS__COM|BUNDLE_GEMS__CONTRIBSYS__COM)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-f0-9]{8}:[a-f0-9]{8})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &[
             "bundle_enterprise__contribsys__com",
@@ -1219,64 +1346,74 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["hooks.slack.com"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "snyk-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:snyk[_.-]?(?:(?:api|oauth)[_.-]?)?(?:key|token))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:snyk[_.-]?(?:(?:api|oauth)[_.-]?)?(?:key|token))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["snyk"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sonar-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:sonar[_.-]?(login|token))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}((?:squ_|sqp_|sqa_)?[a-z0-9=_\-]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:sonar[_.-]?(login|token))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}((?:squ_|sqp_|sqa_)?[a-z0-9=_\-]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["sonar"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sourcegraph-access-token",
-        pattern: r#"(?i)\b(\b(sgp_(?:[a-fA-F0-9]{16}|local)_[a-fA-F0-9]{40}|sgp_[a-fA-F0-9]{40}|[a-fA-F0-9]{40})\b)(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)\b(\b(sgp_(?:[a-fA-F0-9]{16}|local)_[a-fA-F0-9]{40}|sgp_[a-fA-F0-9]{40}|[a-fA-F0-9]{40})\b)(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["sgp_", "sourcegraph"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "square-access-token",
-        pattern: r#"\b((?:EAAA|sq0atp-)[\w-]{22,60})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b((?:EAAA|sq0atp-)[\w-]{22,60})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &["sq0atp-", "eaaa"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "squarespace-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:squarespace)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:squarespace)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["squarespace"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "stripe-access-token",
-        pattern: r#"\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(2.0),
         keywords: &[
             "sk_test", "sk_live", "sk_prod", "rk_test", "rk_live", "rk_prod",
         ],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sumologic-access-id",
-        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:(?-i:[Ss]umo|SUMO))(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(su[a-zA-Z0-9]{12})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"[\w.-]{0,50}?(?i:[\w.-]{0,50}?(?:(?-i:[Ss]umo|SUMO))(?:[ \t\w.-]{0,20})[\s'"]{0,3})(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(su[a-zA-Z0-9]{12})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["sumo"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "sumologic-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:(?-i:[Ss]umo|SUMO))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:(?-i:[Ss]umo|SUMO))(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{64})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.0),
         keywords: &["sumo"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "telegram-bot-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:telegr)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{5,16}:(?-i:A)[a-z0-9_\-]{34})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:telegr)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{5,16}:(?-i:A)[a-z0-9_\-]{34})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["telegr"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "travisci-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:travis)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{22})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:travis)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{22})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["travis"],
     },
@@ -1287,81 +1424,94 @@ pub const GITLEAKS_RULES: &[Rule] = &[
         keywords: &["sk"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "twitch-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:twitch)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{30})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:twitch)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{30})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["twitch"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "twitter-access-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{45})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{45})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["twitter"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "twitter-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{15,25}-[a-zA-Z0-9]{20,40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([0-9]{15,25}-[a-zA-Z0-9]{20,40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["twitter"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "twitter-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{25})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{25})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["twitter"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "twitter-api-secret",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{50})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{50})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["twitter"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "twitter-bearer-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(A{22}[a-zA-Z0-9%]{80,100})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:twitter)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(A{22}[a-zA-Z0-9%]{80,100})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["twitter"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "typeform-api-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:typeform)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(tfp_[a-z0-9\-_\.=]{59})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:typeform)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(tfp_[a-z0-9\-_\.=]{59})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["tfp_"],
     },
     Rule {
         // Bound widened for Rust: {138,300} -> {138,}
+        // Trailing delimiter widened for prose: see the generator.
         name: "vault-batch-token",
-        pattern: r#"\b(hvb\.[\w-]{138,})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b(hvb\.[\w-]{138,})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(4.0),
         keywords: &["hvb."],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "vault-service-token",
-        pattern: r#"\b((?:hvs\.[\w-]{90,120}|s\.(?i:[a-z0-9]{24})))(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"\b((?:hvs\.[\w-]{90,120}|s\.(?i:[a-z0-9]{24})))(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Entropy(3.5),
         keywords: &["hvs.", "s."],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "yandex-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:yandex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(t1\.[A-Z0-9a-z_-]+[=]{0,2}\.[A-Z0-9a-z_-]{86}[=]{0,2})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:yandex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(t1\.[A-Z0-9a-z_-]+[=]{0,2}\.[A-Z0-9a-z_-]{86}[=]{0,2})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["yandex"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "yandex-api-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:yandex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(AQVN[A-Za-z0-9_\-]{35,38})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:yandex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(AQVN[A-Za-z0-9_\-]{35,38})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["yandex"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "yandex-aws-access-token",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:yandex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(YC[a-zA-Z0-9_\-]{38})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:yandex)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}(YC[a-zA-Z0-9_\-]{38})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["yandex"],
     },
     Rule {
+        // Trailing delimiter widened for prose: see the generator.
         name: "zendesk-secret-key",
-        pattern: r#"(?i)[\w.-]{0,50}?(?:zendesk)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{40})(?:[\x60'"\s;]|\\[nr]|$)"#,
+        pattern: r#"(?i)[\w.-]{0,50}?(?:zendesk)(?:[ \t\w.-]{0,20})[\s'"]{0,3}(?:=|>|:{1,3}=|\|\||:|=>|\?=|,)[\x60'"\s=]{0,5}([a-z0-9]{40})(?:[\x60'"\s;,.!?)\]}]|\\[nr]|$)"#,
         confidence: Confidence::Shape,
         keywords: &["zendesk"],
     },
