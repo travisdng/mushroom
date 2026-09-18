@@ -195,9 +195,26 @@ impl RuleSet {
 
     /// The rules Mushroom ships with: the vendored table plus its own.
     pub fn builtin() -> Self {
+        Self::builtin_without(&[])
+    }
+
+    /// The shipped rules, minus the ones the user switched off.
+    ///
+    /// Disabling is by name, and a name that matches nothing is ignored rather
+    /// than reported: the vendored table changes between versions, and a rule
+    /// that has since been renamed should not stop the application starting.
+    pub fn builtin_without(disabled: &[String]) -> Self {
         let mut rules = super::gitleaks_rules::GITLEAKS_RULES.to_vec();
         rules.extend_from_slice(MUSHROOM_RULES);
+        rules.retain(|rule| !disabled.iter().any(|off| off == rule.name));
         Self::new(rules)
+    }
+
+    /// Every rule this set could apply, by name, for the Settings list.
+    pub fn names(&self) -> Vec<&'static str> {
+        let mut names: Vec<&'static str> = self.rules.iter().map(|r| r.name).collect();
+        names.sort_unstable();
+        names
     }
 
     pub fn len(&self) -> usize {
@@ -422,6 +439,11 @@ pub enum Rules {
 impl Rules {
     pub fn builtin() -> Self {
         Rules::Ready(Arc::new(RuleSet::builtin()))
+    }
+
+    /// The shipped rules minus the ones switched off in Settings.
+    pub fn builtin_without(disabled: &[String]) -> Self {
+        Rules::Ready(Arc::new(RuleSet::builtin_without(disabled)))
     }
 
     /// A deliberately broken set.

@@ -491,7 +491,7 @@ mod value_escape_tests {
 
         let request = ChatRequest {
             model: "test-model".into(),
-            messages: vec![Message::user(&format!(
+            messages: vec![Message::user(format!(
                 "the runner used {SECRET} until it was rotated"
             ))],
             temperature: None,
@@ -535,5 +535,97 @@ mod value_escape_tests {
         };
         let message = sanitise(request, &policy).unwrap_err().to_string();
         assert!(!message.contains("AK1AQYRZ5TMK7VW3XJ42"), "{message}");
+    }
+}
+
+#[cfg(test)]
+mod mode_tests {
+    use super::*;
+    use crate::ai::provider::Message;
+
+    const SECRET: &str = "AK1AQYRZ5TMK7VW3XJ42";
+
+    fn request_with_secret() -> ChatRequest {
+        ChatRequest {
+            model: "test-model".into(),
+            messages: vec![
+                Message::system(format!("=== EXCERPT 1 ===\nthe runner used {SECRET}")),
+                Message::user("which key did the runner use?"),
+            ],
+            temperature: None,
+            max_tokens: None,
+            sources: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn redact_replaces_and_keeps_the_message() {
+        let out = sanitise(request_with_secret(), &Policy::new(PrivacyMode::Redact)).unwrap();
+        assert_eq!(out.request().messages.len(), 2, "nothing withheld");
+        assert!(!out.request().messages[0].content.contains(SECRET));
+        assert!(out.request().messages[0].content.contains("[redacted:"));
+        assert_eq!(out.report().redacted_count(), 1);
+        assert!(out.report().withheld.is_empty());
+    }
+
+    #[test]
+    fn block_withholds_the_whole_message_and_names_what_it_dropped() {
+        // The user chose to lose the context rather than trust the marker.
+        let out = sanitise(request_with_secret(), &Policy::new(PrivacyMode::Block)).unwrap();
+
+        assert_eq!(out.request().messages.len(), 1, "the excerpt is gone");
+        assert!(!out.request().messages[0].content.contains(SECRET));
+        assert_eq!(out.report().withheld.len(), 1);
+        assert_eq!(out.report().withheld[0].kind, "note excerpt");
+        assert_eq!(out.report().withheld[0].rule, "aws-access-token");
+        // Nothing was edited, so nothing is reported as redacted.
+        assert!(out.report().redactions.is_empty());
+    }
+
+    #[test]
+    fn block_leaves_clean_messages_alone() {
+        let clean = ChatRequest {
+            model: "m".into(),
+            messages: vec![Message::user("what happened to the node pool?")],
+            temperature: None,
+            max_tokens: None,
+            sources: Vec::new(),
+        };
+        let out = sanitise(clean, &Policy::new(PrivacyMode::Block)).unwrap();
+        assert_eq!(out.request().messages.len(), 1);
+        assert!(out.report().is_clean());
+    }
+
+    #[test]
+    fn off_sends_what_it_was_given() {
+        // Consent to skip the guessing layer. Recorded in the report so the
+        // notice can say which posture produced the answer.
+        let out = sanitise(request_with_secret(), &Policy::new(PrivacyMode::Off)).unwrap();
+        assert!(out.request().messages[0].content.contains(SECRET));
+        assert_eq!(out.report().mode, PrivacyMode::Off);
+        assert!(out.report().is_clean());
+    }
+
+    #[test]
+    fn a_disabled_rule_stops_firing() {
+        let policy = Policy::with_rules(
+            PrivacyMode::Redact,
+            Rules::builtin_without(&["aws-access-token".to_string()]),
+        );
+        let out = sanitise(request_with_secret(), &policy).unwrap();
+        assert!(
+            out.request().messages[0].content.contains(SECRET),
+            "the rule was switched off, so it should not fire"
+        );
+        assert!(out.report().is_clean());
+    }
+
+    #[test]
+    fn disabling_a_rule_that_does_not_exist_is_ignored() {
+        // The vendored table changes between versions. A rule that has since
+        // been renamed must not stop the application starting.
+        let rules = Rules::builtin_without(&["no-such-rule-was-ever-shipped".to_string()]);
+        let set = rules.ready().unwrap();
+        assert!(set.len() > 150);
     }
 }

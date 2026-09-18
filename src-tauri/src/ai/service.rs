@@ -33,13 +33,16 @@ pub struct AiService {
     /// `None` when the settings cannot produce a usable client.
     client: RwLock<Option<Arc<AiClient>>>,
     last_connection: Mutex<Option<LastConnection>>,
-    /// Compiled once, here, rather than per request (spec 08 R7.2).
-    rules: Rules,
+    /// Built from the user's disabled-rule list, and rebuilt when that
+    /// changes. Compiling nothing up front is what makes this cheap — see
+    /// `ai/privacy/rules.rs`.
+    rules: RwLock<Rules>,
 }
 
 impl AiService {
     pub fn new(config: AiConfig) -> Self {
-        Self::with_rules(config, Rules::builtin())
+        let disabled = config.ai_disabled_rules.clone();
+        Self::with_rules(config, Rules::builtin_without(&disabled))
     }
 
     /// Build with a specific rule set.
@@ -53,7 +56,7 @@ impl AiService {
             config: Mutex::new(config),
             client: RwLock::new(None),
             last_connection: Mutex::new(None),
-            rules,
+            rules: RwLock::new(rules),
         };
         service.rebuild();
         service
@@ -89,7 +92,29 @@ impl AiService {
         }
     }
 
-    pub fn set_config(&self, config: AiConfig) {
+    pub fn set_config(&self, mut config: AiConfig) {
+        // `Off` was consent to send unscanned text to *that* endpoint, not to
+        // whatever it is pointed at next month (spec 08 R4.5). Changing the
+        // endpoint therefore withdraws it, loudly enough to see in the log.
+        let previous = self.config().base_url;
+        if config.privacy_mode == crate::ai::privacy::PrivacyMode::Off
+            && config.base_url != previous
+        {
+            tracing::warn!(
+                target: "ai",
+                from = %host_of(&previous),
+                to = %host_of(&config.base_url),
+                "the AI endpoint changed; privacy mode reset from off to redact"
+            );
+            config.privacy_mode = crate::ai::privacy::PrivacyMode::Redact;
+        }
+
+        // Rebuild the rule set too: turning a rule off in Settings has to take
+        // effect on the next question, not the next launch. A privacy control
+        // that needs a restart is one people believe is on when it is not.
+        if let Ok(mut slot) = self.rules.write() {
+            *slot = Rules::builtin_without(&config.ai_disabled_rules);
+        }
         if let Ok(mut current) = self.config.lock() {
             *current = config;
         }
@@ -118,7 +143,12 @@ impl AiService {
     /// takes effect on the next question rather than the next launch.
     fn policy(&self) -> Policy {
         let config = self.config();
-        Policy::with_rules(config.privacy_mode, self.rules.clone())
+        let rules = self
+            .rules
+            .read()
+            .map(|r| r.clone())
+            .unwrap_or_else(|_| Rules::broken("the rule set lock was poisoned"));
+        Policy::with_rules(config.privacy_mode, rules)
             .with_exclusions(Exclusions::new(&config.ai_exclusions))
     }
 
@@ -381,6 +411,52 @@ mod tests {
         let service = AiService::new(config);
         assert!(matches!(service.client(), Err(AiError::Unconfigured)));
         assert!(service.last_connection().is_none());
+    }
+
+    #[test]
+    fn pointing_at_a_new_endpoint_withdraws_consent_to_send_unscanned() {
+        use crate::ai::privacy::PrivacyMode;
+
+        let service = AiService::new(AiConfig {
+            base_url: "http://first.example/v1".into(),
+            privacy_mode: PrivacyMode::Off,
+            ..AiConfig::default()
+        });
+        assert_eq!(service.config().privacy_mode, PrivacyMode::Off);
+
+        service.set_config(AiConfig {
+            base_url: "http://somewhere-else.example/v1".into(),
+            privacy_mode: PrivacyMode::Off,
+            ..AiConfig::default()
+        });
+
+        assert_eq!(
+            service.config().privacy_mode,
+            PrivacyMode::Redact,
+            "consent was for the old endpoint, not the new one"
+        );
+    }
+
+    #[test]
+    fn changing_an_unrelated_setting_leaves_the_mode_alone() {
+        // Only the endpoint withdraws consent. Nagging on every save would
+        // teach people to click through it.
+        use crate::ai::privacy::PrivacyMode;
+
+        let service = AiService::new(AiConfig {
+            base_url: "http://first.example/v1".into(),
+            privacy_mode: PrivacyMode::Off,
+            ..AiConfig::default()
+        });
+
+        service.set_config(AiConfig {
+            base_url: "http://first.example/v1".into(),
+            model: "a-different-model".into(),
+            privacy_mode: PrivacyMode::Off,
+            ..AiConfig::default()
+        });
+
+        assert_eq!(service.config().privacy_mode, PrivacyMode::Off);
     }
 
     #[test]

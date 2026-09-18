@@ -52,6 +52,14 @@ pub struct AiConfig {
     #[serde(default)]
     pub ai_exclusions: Vec<crate::exclusion::ExclusionRule>,
 
+    /// Detection rules the user has switched off, by name.
+    ///
+    /// Stored as names rather than indexes so the list survives the rule table
+    /// being regenerated — a vendored refresh reorders it, and a saved index
+    /// would then disable a different rule than the one that was chosen.
+    #[serde(default)]
+    pub ai_disabled_rules: Vec<String>,
+
     /// Whether the user has ever applied AI settings.
     ///
     /// Not derivable from the other fields: `base_url` and `model` always hold
@@ -76,6 +84,7 @@ impl Default for AiConfig {
             stream: true,
             privacy_mode: crate::ai::privacy::PrivacyMode::Redact,
             ai_exclusions: Vec::new(),
+            ai_disabled_rules: Vec::new(),
             configured: false,
         }
     }
