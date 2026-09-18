@@ -47,6 +47,11 @@ tokio = { version = "1", features = ["sync", "time", "rt", "macros"] }
 tokio-util = "0.7"
 # Windows Credential Manager, so the API key never lands in a file.
 keyring = { version = "3", features = ["windows-native"] }
+# Credential detection in the AI privacy gate. Not a new dependency in any
+# meaningful sense: tauri-utils already pulls the same version into the binary,
+# so this costs one line and no extra compilation. Rust's regex is RE2-family,
+# like Go's — which is what makes the vendored gitleaks patterns port as-is.
+regex = "1"
 
 [dev-dependencies]
 tempfile = "3"
