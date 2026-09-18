@@ -46,6 +46,10 @@ pub enum AiDelta {
     Retrieved {
         passages: Vec<RetrievedPassage>,
         terms: Vec<String>,
+        /// Notes that matched but were withheld because the user excluded
+        /// them. A count, not a list: this crosses to the window, and the
+        /// window is the only place it goes.
+        excluded_notes: usize,
     },
     Started {
         model: String,
@@ -82,6 +86,9 @@ pub struct AiAnswer {
     pub declined: bool,
     pub estimated_prompt_tokens: u32,
     pub latency_ms: u64,
+    /// Notes withheld by the user's exclusions (spec 08 R2.6). Kept on the
+    /// answer as well as the delta so the notice survives a re-render.
+    pub excluded_notes: usize,
 }
 
 /// Where streamed text goes. `FnMut` so a caller can push into a Tauri
@@ -113,6 +120,7 @@ impl AiSearchService {
         sink(AiDelta::Retrieved {
             passages: retrieved.passages.clone(),
             terms: terms.terms.clone(),
+            excluded_notes: retrieved.excluded_notes,
         });
 
         // No passages means no grounds for an answer. Calling the model here
@@ -136,6 +144,7 @@ impl AiSearchService {
                 declined: true,
                 estimated_prompt_tokens: 0,
                 latency_ms: started.elapsed().as_millis() as u64,
+                excluded_notes: retrieved.excluded_notes,
             };
             sink(AiDelta::Done {
                 answer: Box::new(answer.clone()),
@@ -248,6 +257,7 @@ impl AiSearchService {
             no_results: false,
             estimated_prompt_tokens: built.estimated_tokens,
             latency_ms: started.elapsed().as_millis() as u64,
+            excluded_notes: retrieved.excluded_notes,
         };
 
         sink(AiDelta::Done {
@@ -360,6 +370,7 @@ impl AiSearchService {
             .collect();
 
         Ok(Retrieved {
+            excluded_notes: found.excluded_notes,
             passages: found.passages,
             excerpts,
         })
@@ -411,6 +422,7 @@ fn rejects_streaming(err: &AiError) -> bool {
 struct Retrieved {
     passages: Vec<RetrievedPassage>,
     excerpts: Vec<Excerpt>,
+    excluded_notes: usize,
 }
 
 /// The citation map for an answer, for callers that need to resolve a click

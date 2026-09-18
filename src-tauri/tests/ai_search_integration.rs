@@ -249,7 +249,9 @@ async fn retrieved_notes_are_reported_before_the_model_is_called() {
 
     let deltas = captured.deltas.lock().unwrap();
     match deltas.first() {
-        Some(AiDelta::Retrieved { passages, terms }) => {
+        Some(AiDelta::Retrieved {
+            passages, terms, ..
+        }) => {
             assert!(!passages.is_empty(), "nothing was reported as retrieved");
             assert!(terms.contains(&"gpu".to_string()), "{terms:?}");
         }
@@ -672,4 +674,69 @@ async fn a_stream_that_breaks_part_way_is_not_retried_as_a_whole_answer() {
         1,
         "one request only: the stream worked, the network did not"
     );
+}
+
+/// The panel is told when notes were withheld.
+///
+/// Without the notice, an answer built from less than the user expects reads
+/// as a bad answer, and the obvious conclusion is that retrieval is broken
+/// rather than that it did exactly as it was told.
+#[tokio::test]
+async fn the_panel_is_told_how_many_notes_were_excluded() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("notes");
+    let db_path = dir.path().join("mushroom.db");
+    cache::bootstrap(&root).unwrap();
+
+    for (rel, body) in [
+        (
+            "work/gpu-infra.md",
+            "# GPU Infrastructure\n\nGPU nodes drain on a schedule.\n".to_string(),
+        ),
+        (
+            "personal/vault.md",
+            "---\ntitle: GPU Vault\nai: false\n---\n# GPU Vault\n\nGPU drain credentials.\n"
+                .to_string(),
+        ),
+    ] {
+        let path = root.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, body).unwrap();
+    }
+
+    let server = MockServer::start().await;
+    mount_answer(&server, "The nodes drain on a schedule [1].").await;
+
+    let captured = Captured::new();
+    AiSearchService::new(indexed(&root, &db_path), ai_for(&server))
+        .answer(
+            "what do the notes say about the GPU drain?",
+            None,
+            captured.sink(),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+    let deltas = captured.deltas.lock().unwrap();
+    let retrieved = deltas
+        .iter()
+        .find_map(|d| match d {
+            AiDelta::Retrieved { excluded_notes, .. } => Some(*excluded_notes),
+            _ => None,
+        })
+        .expect("a Retrieved delta");
+
+    assert_eq!(retrieved, 1, "the vault note matched and was withheld");
+
+    // And it survives onto the finished answer, so the notice does not vanish
+    // when the panel re-renders from the answer rather than the delta.
+    let done = deltas
+        .iter()
+        .find_map(|d| match d {
+            AiDelta::Done { answer } => Some(answer.excluded_notes),
+            _ => None,
+        })
+        .expect("a Done delta");
+    assert_eq!(done, 1);
 }

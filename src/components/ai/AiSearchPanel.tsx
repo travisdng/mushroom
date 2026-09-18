@@ -175,6 +175,7 @@ export function AiSearchPanel({
           stage={ai.stage}
           passages={ai.retrieved}
           terms={ai.terms}
+        excludedNotes={ai.excludedNotes}
           onOpen={open}
         />
 

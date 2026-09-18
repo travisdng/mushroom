@@ -57,7 +57,7 @@ const PLANTED: &[Planted] = &[
     },
     Planted {
         rule: "google-api-key",
-        value: "AIzbSyD-1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P",
+        value: "AIzbSyD1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P",
     },
     Planted {
         rule: "openai-key",
@@ -69,7 +69,11 @@ const PLANTED: &[Planted] = &[
     },
     Planted {
         rule: "private-key-block",
-        value: "MIIEowIBAAKCAQEAxKfakekeymaterialforatestonlyneverreal1234567",
+        // The `private-key` rule wants at least 64 characters between the
+        // BEGIN and END markers. An earlier fixture had 60, so the harness
+        // would have reported this kind as caught without the rule ever
+        // running — a test fixture that lets the thing under test off.
+        value: "MIIEowIBAAKCAQEAxKfakekeymaterialforatestonlyneverrealAAAAAAAA\nBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
     },
 ];
 

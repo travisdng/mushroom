@@ -149,7 +149,7 @@ impl Retriever for FtsRetriever<'_> {
         let modified_after = q.modified_after;
         let apply_ai_exclusion = q.excluded.is_some();
 
-        let mut rows = self.db.with("searching passages", move |conn| {
+        let rows = self.db.with("searching passages", move |conn| {
             let mut stmt = conn.prepare(
                 "SELECT n.path, n.title, n.folder,
                         p.heading_path, p.line_start, p.line_end, p.text,
@@ -248,8 +248,44 @@ impl Retriever for FtsRetriever<'_> {
             let seen: std::collections::HashSet<String> = out.iter().map(|r| r.0.clone()).collect();
             out.extend(titles.into_iter().filter(|t| !seen.contains(&t.0)));
 
-            Ok(out)
+            // How many notes the SQL filter above withheld.
+            //
+            // A separate query, because the filter belongs in SQL — an
+            // excluded note must not eat a fetch slot, and somebody who
+            // excludes a large folder and asks about it would otherwise get
+            // nothing back — but the count cannot then be observed from the
+            // rows that came out. Counting is the price of filtering early,
+            // and the user needs the number: without it, a short answer reads
+            // as retrieval being broken.
+            let excluded_by_flag: usize = if apply_ai_exclusion {
+                conn.query_row(
+                    "SELECT COUNT(*) FROM (
+                       SELECT p.note_id AS id
+                         FROM passages_fts
+                         JOIN passages p ON p.id = passages_fts.rowid
+                         JOIN notes n ON n.id = p.note_id
+                        WHERE passages_fts MATCH ?1
+                          AND n.ai_excluded = 1
+                          AND (?2 IS NULL OR n.folder = ?2 OR n.folder LIKE ?3)
+                       UNION
+                       SELECT n.id
+                         FROM notes_fts
+                         JOIN notes n ON n.id = notes_fts.rowid
+                        WHERE notes_fts MATCH ?1
+                          AND n.ai_excluded = 1
+                          AND (?2 IS NULL OR n.folder = ?2 OR n.folder LIKE ?3)
+                     )",
+                    params![expression, folder, like],
+                    |row| row.get::<_, i64>(0),
+                )? as usize
+            } else {
+                0
+            };
+
+            Ok((out, excluded_by_flag))
         })?;
+
+        let (mut rows, excluded_by_flag) = rows;
 
         // bm25() returns a negative number, more negative being a better match.
         // Normalise within the result set so the score means something to a
@@ -309,7 +345,9 @@ impl Retriever for FtsRetriever<'_> {
 
         Ok(RetrievalResult {
             passages: out,
-            excluded_notes: dropped_ids.len(),
+            // No overlap: a note caught by the SQL filter never reaches the
+            // Rust loop, so the two sets are disjoint by construction.
+            excluded_notes: excluded_by_flag + dropped_ids.len(),
         })
     }
 }
@@ -656,11 +694,14 @@ mod exclusion_tests {
             "got {:?}",
             paths(&hits)
         );
-        // The vault note is dropped by the SQL filter before the Rust one ever
-        // sees it, so only the diary is counted here. The number exists to
-        // tell the user their answer was built from less than they expect; it
-        // is not an audit of which mechanism caught what.
-        assert_eq!(hits.excluded_notes, 1);
+        // Both: the vault by its frontmatter (caught in SQL) and the diary by
+        // the folder rule (caught in Rust). An earlier version counted only
+        // the second, which made the commonest case — a note marked
+        // `ai: false` — invisible in the notice. The number exists to tell the
+        // user their answer was built from less than they expect, so it has to
+        // count every mechanism, not the one that happens to be observable
+        // from the rows that came back.
+        assert_eq!(hits.excluded_notes, 2);
     }
 
     #[test]

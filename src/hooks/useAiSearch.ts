@@ -24,6 +24,8 @@ export type AiSearchApi = {
   answer: AiAnswer | null;
   retrieved: RetrievedPassage[];
   terms: string[];
+  /** Notes that matched but the user has excluded from AI. */
+  excludedNotes: number;
   model: string | null;
   error: AppErrorDto | null;
   /** True when the stream stopped before the answer finished. */
@@ -49,6 +51,7 @@ export function useAiSearch(): AiSearchApi {
   const [answer, setAnswer] = useState<AiAnswer | null>(null);
   const [retrieved, setRetrieved] = useState<RetrievedPassage[]>([]);
   const [terms, setTerms] = useState<string[]>([]);
+  const [excludedNotes, setExcludedNotes] = useState(0);
   const [model, setModel] = useState<string | null>(null);
   const [error, setError] = useState<AppErrorDto | null>(null);
   const [incomplete, setIncomplete] = useState(false);
@@ -93,6 +96,7 @@ export function useAiSearch(): AiSearchApi {
       setAnswer(null);
       setRetrieved([]);
       setTerms([]);
+      setExcludedNotes(0);
       setModel(null);
       setError(null);
       setIncomplete(false);
@@ -105,6 +109,7 @@ export function useAiSearch(): AiSearchApi {
           case "retrieved":
             setRetrieved(delta.passages);
             setTerms(delta.terms);
+            setExcludedNotes(delta.excludedNotes);
             setStage("asking");
             break;
           case "started":
@@ -176,6 +181,7 @@ export function useAiSearch(): AiSearchApi {
     setAnswer(null);
     setRetrieved([]);
     setTerms([]);
+    setExcludedNotes(0);
     setModel(null);
     setError(null);
     setIncomplete(false);
@@ -193,6 +199,7 @@ export function useAiSearch(): AiSearchApi {
     answer,
     retrieved,
     terms,
+    excludedNotes,
     model,
     error,
     incomplete,

@@ -57,11 +57,18 @@ export type AiAnswer = {
   declined: boolean;
   estimatedPromptTokens: number;
   latencyMs: number;
+  /** Notes that matched but are excluded from AI by the user. */
+  excludedNotes: number;
 };
 
 /** Serde tags these with `kind`. */
 export type AiDelta =
-  | { kind: "retrieved"; passages: RetrievedPassage[]; terms: string[] }
+  | {
+      kind: "retrieved";
+      passages: RetrievedPassage[];
+      terms: string[];
+      excludedNotes: number;
+    }
   | { kind: "started"; model: string }
   | { kind: "text"; delta: string }
   | { kind: "done"; answer: AiAnswer }

@@ -325,3 +325,11 @@
     opacity: 1;
   }
 }
+
+/* "2 matching notes are excluded from AI." Plain 11px text in the panel flow,
+   not a badge and not a warning colour: the user chose this, and it is stated
+   so a short answer is explicable rather than mysterious. */
+.retrieved__excluded {
+  padding: 2px 4px;
+  color: var(--text-disabled);
+}

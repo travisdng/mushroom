@@ -20,6 +20,7 @@
 //! `.kiro/steering/ai-integration.md`, and it matters: exclusion is complete,
 //! detection is best-effort, and no screen may claim Mushroom removes secrets.
 
+pub mod gitleaks_rules;
 pub mod rules;
 
 use serde::{Deserialize, Serialize};
