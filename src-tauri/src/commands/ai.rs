@@ -206,3 +206,84 @@ pub async fn list_ai_models(
         }
     })
 }
+
+/// The request that actually went to the endpoint, markers and all (R5.1).
+///
+/// Local only, in memory only. This is the screen that lets somebody check
+/// rather than trust, which is worth more than any assurance in a dialog.
+#[tauri::command]
+pub fn get_last_ai_request(
+    state: tauri::State<'_, AppState>,
+) -> Option<crate::ai::privacy::LastRequest> {
+    state.ai.last_request()
+}
+
+/// Every detection rule Mushroom ships, for the Settings list.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrivacyRules {
+    /// Rule names, sorted. The list is long; Settings filters it.
+    pub available: Vec<String>,
+    pub disabled: Vec<String>,
+}
+
+#[tauri::command]
+pub fn get_privacy_rules(state: tauri::State<'_, AppState>) -> PrivacyRules {
+    let disabled = state
+        .config
+        .lock()
+        .map(|c| c.ai.ai_disabled_rules.clone())
+        .unwrap_or_default();
+
+    // Every shipped rule, including the ones currently switched off — a rule
+    // you have disabled must still be visible, or you cannot switch it back.
+    let all = crate::ai::privacy::RuleSet::builtin();
+    PrivacyRules {
+        available: all.names().into_iter().map(str::to_string).collect(),
+        disabled,
+    }
+}
+
+/// Set the exclusion rules, parsing each so Settings can show a broken one.
+#[tauri::command]
+pub fn set_ai_exclusions(
+    state: tauri::State<'_, AppState>,
+    patterns: Vec<String>,
+) -> Result<Vec<crate::exclusion::ExclusionRule>, AppErrorDto> {
+    let parsed: Vec<crate::exclusion::ExclusionRule> = patterns
+        .iter()
+        .map(|p| crate::exclusion::ExclusionRule::parse(p))
+        .collect();
+
+    let snapshot = {
+        let mut config = state
+            .config
+            .lock()
+            .map_err(|_| AppError::Internal("settings lock poisoned".into()))?;
+        config.ai.ai_exclusions = parsed.clone();
+        config.clone()
+    };
+    save(&state.data_dir, &snapshot)?;
+    state.ai.set_config(snapshot.ai);
+    Ok(parsed)
+}
+
+/// Switch detection rules on or off by name.
+#[tauri::command]
+pub fn set_disabled_privacy_rules(
+    state: tauri::State<'_, AppState>,
+    disabled: Vec<String>,
+) -> Result<(), AppErrorDto> {
+    let snapshot = {
+        let mut config = state
+            .config
+            .lock()
+            .map_err(|_| AppError::Internal("settings lock poisoned".into()))?;
+        config.ai.ai_disabled_rules = disabled;
+        config.clone()
+    };
+    save(&state.data_dir, &snapshot)?;
+    // Takes effect on the next question, not the next launch.
+    state.ai.set_config(snapshot.ai);
+    Ok(())
+}

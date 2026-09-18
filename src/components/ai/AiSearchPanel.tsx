@@ -4,6 +4,8 @@ import { AiUnconfigured } from "../common/AiUnconfigured";
 import { Button } from "../common/Button";
 import { TextArea } from "../common/Field";
 import { AnswerView } from "./AnswerView";
+import { PrivacyNotice } from "./PrivacyNotice";
+import { LastRequestDialog } from "./LastRequestDialog";
 import { RetrievedNotes } from "./RetrievedNotes";
 import { SourceList } from "./SourceList";
 import { useAiSearch } from "../../hooks/useAiSearch";
@@ -32,6 +34,7 @@ export function AiSearchPanel({
   settingsVersion?: number;
 }) {
   const ai = useAiSearch();
+  const [showLastRequest, setShowLastRequest] = useState(false);
   const { notes, openNote } = useNotes();
   const { setStatus } = useShell();
   const [configured, setConfigured] = useState<boolean | null>(null);
@@ -204,6 +207,11 @@ export function AiSearchPanel({
           onOpenCitation={openCitation}
         />
 
+        <PrivacyNotice
+          report={ai.answer?.privacy ?? null}
+          onShowRequest={() => setShowLastRequest(true)}
+        />
+
         {ai.answer && !ai.answer.noResults ? (
           <SourceList
             used={ai.answer.grounding.used}
@@ -215,6 +223,10 @@ export function AiSearchPanel({
           />
         ) : null}
       </div>
-    </div>
+    
+      {showLastRequest ? (
+        <LastRequestDialog onClose={() => setShowLastRequest(false)} />
+      ) : null}
+</div>
   );
 }

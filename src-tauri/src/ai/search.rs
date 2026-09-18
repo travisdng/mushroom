@@ -89,6 +89,8 @@ pub struct AiAnswer {
     /// Notes withheld by the user's exclusions (spec 08 R2.6). Kept on the
     /// answer as well as the delta so the notice survives a re-render.
     pub excluded_notes: usize,
+    /// What the privacy gate changed before sending (spec 08 R5.3).
+    pub privacy: Option<crate::ai::privacy::PrivacyReport>,
 }
 
 /// Where streamed text goes. `FnMut` so a caller can push into a Tauri
@@ -145,6 +147,8 @@ impl AiSearchService {
                 estimated_prompt_tokens: 0,
                 latency_ms: started.elapsed().as_millis() as u64,
                 excluded_notes: retrieved.excluded_notes,
+                // No model call was made, so the gate never ran.
+                privacy: None,
             };
             sink(AiDelta::Done {
                 answer: Box::new(answer.clone()),
@@ -258,6 +262,7 @@ impl AiSearchService {
             estimated_prompt_tokens: built.estimated_tokens,
             latency_ms: started.elapsed().as_millis() as u64,
             excluded_notes: retrieved.excluded_notes,
+            privacy: response.privacy,
         };
 
         sink(AiDelta::Done {

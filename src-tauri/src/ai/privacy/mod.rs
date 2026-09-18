@@ -21,12 +21,14 @@
 //! detection is best-effort, and no screen may claim Mushroom removes secrets.
 
 pub mod gitleaks_rules;
+pub mod last;
 pub mod redact;
 pub mod rules;
 
 use serde::{Deserialize, Serialize};
 
 pub use crate::exclusion::{ExclusionRule, Exclusions};
+pub use last::{LastRequest, LastRequestLog};
 pub use rules::{RuleSet, Rules};
 
 use crate::ai::provider::{ChatRequest, Message, Role};

@@ -25,6 +25,7 @@ import { RebuildDialog } from "../components/search/RebuildDialog";
 import { SettingsDialog } from "../components/settings/SettingsDialog";
 import { QuickOpenDialog } from "../components/notebook/QuickOpenDialog";
 import { AiSearchPanel } from "../components/ai/AiSearchPanel";
+import { LastRequestDialog } from "../components/ai/LastRequestDialog";
 import type { ViewMode } from "../components/editor/EditorPane";
 import { useShell, NOT_AVAILABLE } from "../hooks/useShell";
 import { useNotes } from "../hooks/useNotes";
@@ -49,6 +50,7 @@ type DialogKind =
   | { kind: "settings" }
   | { kind: "quick-open" }
   | { kind: "diagnostics" }
+  | { kind: "last-request" }
   | null;
 
 export default function MainWindow() {
@@ -315,6 +317,13 @@ export default function MainWindow() {
           mnemonic: "D",
           onSelect: () => setDialog({ kind: "diagnostics" }),
         },
+        { type: "separator" },
+        {
+          type: "item",
+          label: "Last AI Request…",
+          mnemonic: "L",
+          onSelect: () => setDialog({ kind: "last-request" }),
+        },
       ],
     },
     {
@@ -400,6 +409,9 @@ export default function MainWindow() {
 
       <StatusBar />
 
+      {dialog?.kind === "last-request" ? (
+        <LastRequestDialog onClose={() => setDialog(null)} />
+      ) : null}
       {dialog?.kind === "diagnostics" ? (
         <DiagnosticsDialog
           onClose={() => setDialog(null)}

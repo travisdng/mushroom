@@ -2,10 +2,13 @@ import { call } from "./ipc";
 import type {
   AiConfig,
   AiSettings,
+  ExclusionRule,
   LastConnection,
+  LastRequest,
   ModelList,
   Provider,
   ProviderDefaults,
+  PrivacyRules,
 } from "../types/ai";
 
 export function getAiSettings(): Promise<AiSettings> {
@@ -56,4 +59,22 @@ export function testAiConnection(config?: AiConfig): Promise<LastConnection> {
 /** Lists models from `config` if given, otherwise from whatever is saved. */
 export function listAiModels(config?: AiConfig): Promise<ModelList> {
   return call<ModelList>("list_ai_models", { config: config ?? null });
+}
+
+/** What the last request actually contained. Local only — nothing is sent. */
+export function getLastAiRequest(): Promise<LastRequest | null> {
+  return call<LastRequest | null>("get_last_ai_request");
+}
+
+export function getPrivacyRules(): Promise<PrivacyRules> {
+  return call<PrivacyRules>("get_privacy_rules");
+}
+
+/** Save exclusion patterns; the parsed rules come back with any problems. */
+export function setAiExclusions(patterns: string[]): Promise<ExclusionRule[]> {
+  return call<ExclusionRule[]>("set_ai_exclusions", { patterns });
+}
+
+export function setDisabledPrivacyRules(disabled: string[]): Promise<void> {
+  return call<void>("set_disabled_privacy_rules", { disabled });
 }

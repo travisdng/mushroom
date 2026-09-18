@@ -110,6 +110,12 @@ pub struct ChatResponse {
     pub model: String,
     pub usage: Option<Usage>,
     pub latency_ms: u64,
+    /// What the privacy gate did to the request that produced this.
+    ///
+    /// Attached by `AiService` rather than by the client: the client is handed
+    /// an already-sanitised request and has no business knowing what changed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub privacy: Option<crate::ai::privacy::PrivacyReport>,
 }
 
 /// What `Test Connection` reports back (R5.2).

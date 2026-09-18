@@ -248,6 +248,9 @@ impl AiClient {
             model: envelope.model.unwrap_or_else(|| request.model.clone()),
             usage: envelope.usage,
             latency_ms: started.elapsed().as_millis() as u64,
+            // The client is handed an already-sanitised request and has no
+            // business knowing what changed; `AiService` attaches the report.
+            privacy: None,
         })
     }
 
@@ -324,6 +327,7 @@ impl AiClient {
             model: parser.model.unwrap_or_else(|| request.model.clone()),
             usage: parser.usage,
             latency_ms: started.elapsed().as_millis() as u64,
+            privacy: None,
         })
     }
 

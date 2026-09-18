@@ -11,7 +11,9 @@ use tokio_util::sync::CancellationToken;
 
 use crate::ai::client::{AiClient, StreamSink};
 use crate::ai::error::AiError;
-use crate::ai::privacy::{self, Exclusions, Policy, PrivacyReport, Rules, SanitisedRequest};
+use crate::ai::privacy::{
+    self, Exclusions, LastRequest, LastRequestLog, Policy, PrivacyReport, Rules, SanitisedRequest,
+};
 use crate::ai::provider::{ChatRequest, ChatResponse, ConnectionInfo};
 use crate::config::{secrets, AiConfig};
 
@@ -37,6 +39,9 @@ pub struct AiService {
     /// changes. Compiling nothing up front is what makes this cheap — see
     /// `ai/privacy/rules.rs`.
     rules: RwLock<Rules>,
+    /// The most recent request as sent, for `AI → Last Request…`. In memory
+    /// only; see `ai/privacy/last.rs`.
+    last_request: LastRequestLog,
 }
 
 impl AiService {
@@ -57,6 +62,7 @@ impl AiService {
             client: RwLock::new(None),
             last_connection: Mutex::new(None),
             rules: RwLock::new(rules),
+            last_request: LastRequestLog::default(),
         };
         service.rebuild();
         service
@@ -161,8 +167,10 @@ impl AiService {
         let client = self.client()?;
         let request = privacy::sanitise(request, &self.policy())?;
         self.log_request(&request);
+        let report = request.report().clone();
 
-        let outcome = client.chat(request, cancel).await;
+        let mut outcome = client.chat(request, cancel).await;
+        attach_report(&mut outcome, &report);
         self.log_outcome(&outcome);
         outcome
     }
@@ -177,8 +185,10 @@ impl AiService {
         let client = self.client()?;
         let request = privacy::sanitise(request, &self.policy())?;
         self.log_request(&request);
+        let report = request.report().clone();
 
-        let outcome = client.stream_chat(request, sink, cancel).await;
+        let mut outcome = client.stream_chat(request, sink, cancel).await;
+        attach_report(&mut outcome, &report);
         self.log_outcome(&outcome);
         outcome
     }
@@ -281,7 +291,15 @@ impl AiService {
     /// Takes the *sanitised* request, so `log_prompts` cannot write a
     /// credential to a file on disk that `Copy Diagnostics` does not read but
     /// a support request might attach (spec 08 R6.1).
+    pub fn last_request(&self) -> Option<LastRequest> {
+        self.last_request.snapshot()
+    }
+
     fn log_request(&self, request: &SanitisedRequest) {
+        // Recorded here because this is the one function every send passes
+        // through, so a new path cannot forget to record itself.
+        self.last_request.record(request);
+
         let config = self.config();
         let report = request.report();
         tracing::info!(
@@ -344,6 +362,14 @@ impl AiService {
                 );
             }
         }
+    }
+}
+
+/// Carry the gate's report out with the answer, so the panel can say what
+/// changed without asking a second time.
+fn attach_report(outcome: &mut Result<ChatResponse, AiError>, report: &PrivacyReport) {
+    if let Ok(response) = outcome {
+        response.privacy = Some(report.clone());
     }
 }
 

@@ -10,6 +10,8 @@ import { getConfig } from "../../services/configService";
 import { toAppError } from "../../services/ipc";
 import { PROVIDER_LABELS } from "../../types/ai";
 import type { AiConfig, AiSettings, LastConnection, Provider } from "../../types/ai";
+import { PrivacySettings } from "./PrivacySettings";
+import { EndpointConsentDialog } from "../ai/EndpointConsentDialog";
 
 /** The defaults shown as "(default: …)" next to the Advanced fields. */
 const DEFAULTS = {
@@ -78,6 +80,16 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<LastConnection | null>(null);
   const [applyNote, setApplyNote] = useState<string | null>(null);
+  /**
+   * The endpoint the user has already been shown the consent notice for.
+   *
+   * Seeded from the saved settings once they load: somebody who configured AI
+   * before this existed has already been sending notes there, and a dialog
+   * about it now would be theatre rather than consent. It fires on a *change*,
+   * which is the moment that actually matters.
+   */
+  const [consentedEndpoint, setConsentedEndpoint] = useState<string | null>(null);
+  const [pendingConsent, setPendingConsent] = useState<string | null>(null);
 
   /**
    * Whether the user has typed over the endpoint or model. Switching provider
@@ -94,6 +106,12 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         const root = config.notesRoot ?? "";
         setSettings(aiSettings);
         setKeyStatus(aiSettings.keyStatus);
+        // Only treat the saved endpoint as already-consented when AI has
+        // actually been set up. A fresh install carries a plausible default
+        // that nobody has agreed to anything about.
+        setConsentedEndpoint(
+          aiSettings.config.configured ? aiSettings.config.baseUrl : null,
+        );
         // Only if it still describes the endpoint in the fields. A result left
         // over from an endpoint that was tried and discarded reads as a verdict
         // on the current one.
@@ -194,6 +212,14 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const apply = useCallback(async (): Promise<boolean> => {
     if (!draft || Object.keys(validate(draft)).length > 0) return false;
 
+    // Consent is for a destination, so a new one has to be shown once before
+    // any note content goes to it (R5.4).
+    const nextEndpoint = draft.baseUrl.trim();
+    if (nextEndpoint && nextEndpoint !== consentedEndpoint) {
+      setPendingConsent(nextEndpoint);
+      return false;
+    }
+
     const { notesRoot, ...aiConfig } = draft;
     try {
       const next = await ai.setAiConfig({
@@ -203,6 +229,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
       });
       setSettings(next);
       setKeyStatus(next.keyStatus);
+      setConsentedEndpoint(next.config.baseUrl);
 
       // Changing the notes folder re-scans and re-indexes, so only do it when
       // it actually changed (R3.4).
@@ -437,6 +464,8 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         </div>
       </fieldset>
 
+      <PrivacySettings draft={draft} update={update} endpoint={draft.baseUrl} />
+
       <fieldset className="groupbox">
         <legend>Notes</legend>
 
@@ -525,6 +554,19 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
       </fieldset>
 
       {applyNote ? <div className="settings__apply-note">{applyNote}</div> : null}
-    </Dialog>
+    
+      {pendingConsent ? (
+        <EndpointConsentDialog
+          endpoint={pendingConsent}
+          onAccept={() => {
+            setConsentedEndpoint(pendingConsent);
+            setPendingConsent(null);
+            // Re-run the save now that the destination is agreed.
+            void apply();
+          }}
+          onClose={() => setPendingConsent(null)}
+        />
+      ) : null}
+</Dialog>
   );
 }

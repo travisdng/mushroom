@@ -146,3 +146,102 @@ select.field {
   padding: 4px;
   color: var(--text-disabled);
 }
+
+/* ---------------------------------------------------- Privacy settings */
+
+.settings__row--stacked {
+  align-items: flex-start;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.exclusions {
+  font-family: var(--font-mono);
+  resize: vertical;
+  min-height: 56px;
+}
+
+/* A broken exclusion rule. Stated, not decorated: silently excluding makes
+   the AI look broken, silently including makes the gate a lie. */
+.settings__problem {
+  margin: 2px 0 4px 0;
+  padding: 3px 4px;
+  background: var(--surface-alt);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+.settings__inline-note {
+  margin-left: 6px;
+  color: var(--text-disabled);
+}
+
+/* Over two hundred rules, so a sunken scrolling list rather than a wall. */
+.rule-list {
+  height: 220px;
+  overflow: auto;
+  margin: 4px 0;
+  background: var(--field-bg);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+}
+
+.rule-list__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  line-height: 18px;
+}
+
+.rule-list__row:hover {
+  background: var(--surface-alt);
+}
+
+/* ------------------------------------------------ Endpoint consent */
+
+.consent__endpoint {
+  font-family: var(--font-mono);
+  padding: 3px 4px;
+  margin: 4px 0;
+  background: var(--field-bg);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
+  word-break: break-all;
+}
+
+.consent__list {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.consent__list li {
+  margin-bottom: 2px;
+}
+
+/* The sentence that stops this dialog becoming a false assurance. Not styled
+   as a warning — it is the honest limit of the feature, stated once. */
+.consent__caveat {
+  margin: 6px 0;
+}
+
+.consent__where {
+  margin: 6px 0 0 0;
+  color: var(--text-disabled);
+}

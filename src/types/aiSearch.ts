@@ -1,6 +1,7 @@
 /** Mirrors the AI search types in src-tauri/src/ai/search.rs. */
 
 import type { AppErrorDto } from "./error";
+import type { PrivacyReport } from "./ai";
 
 export type RetrievedPassage = {
   noteId: string;
@@ -59,6 +60,8 @@ export type AiAnswer = {
   latencyMs: number;
   /** Notes that matched but are excluded from AI by the user. */
   excludedNotes: number;
+  /** What the privacy gate changed before sending. Null if nothing was sent. */
+  privacy: PrivacyReport | null;
 };
 
 /** Serde tags these with `kind`. */
