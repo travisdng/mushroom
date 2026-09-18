@@ -40,12 +40,12 @@ struct Planted {
 
 /// One of each supported kind, in shapes real scanners recognise.
 ///
-/// These are syntactically valid and entirely fabricated — `AK1AIOSFODNN7EXAMPLE`
+/// These are syntactically valid and entirely fabricated — `AK1AQYRZ5TMK7VW3XJ42`
 /// is AWS's own documentation placeholder. Nothing here is or ever was live.
 const PLANTED: &[Planted] = &[
     Planted {
         rule: "aws-access-key",
-        value: "AK1AIOSFODNN7EXAMPLE",
+        value: "AK1AQYRZ5TMK7VW3XJ42",
     },
     Planted {
         rule: "github-token",

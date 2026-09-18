@@ -69,6 +69,49 @@ impl Rule {
     }
 }
 
+/// Mushroom's own rules, for shapes the vendored table leaves uncovered.
+///
+/// Each one is here because a gap was found by reading the upstream pattern,
+/// not because it seemed like a good idea:
+///
+/// - `curl-auth-header` needs the word `curl` on the line, so a bare
+///   `Authorization: Bearer …` pasted into a note is not covered.
+/// - `openai-api-key` requires the modern key's `T3BlbkFJ` marker, so the
+///   legacy `sk-…` form is not covered — and that is the form most likely to
+///   be sitting in an old note.
+/// - nothing upstream catches credentials embedded in a URL without `curl`
+///   in front of them.
+///
+/// These are deliberately narrow. The broad, entropy-gated rule for
+/// `password = …` is separate, because a rule that guesses needs a different
+/// kind of care than one that recognises.
+pub const MUSHROOM_RULES: &[Rule] = &[
+    // The pre-2024 OpenAI shape, and anything else using the same convention.
+    // `sk-` in prose is rare enough to need no entropy floor.
+    Rule::with_keywords("openai-key", r"\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}", &["sk-"]),
+    // A pasted request header. `\S{8,}` rather than `.+` so a placeholder like
+    // `Authorization: Bearer <token>` is left alone.
+    Rule::with_keywords(
+        "bearer-header",
+        r"(?i)authorization:\s*(?:bearer|token)\s+[\w.~+/=-]{8,}",
+        &["authorization:"],
+    ),
+    // `postgres://user:hunter2@host`. The character classes stop it swallowing
+    // an ordinary URL, which has no `:` before the `@`.
+    Rule::with_keywords(
+        "basic-auth-url",
+        r"[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s/:@]+:[^\s/@]{3,}@",
+        &["://"],
+    ),
+    // Azure storage and Service Bus strings. High confidence: `AccountKey=`
+    // does not appear in prose by accident.
+    Rule::with_keywords(
+        "azure-connection-key",
+        r"(?i)accountkey=[A-Za-z0-9+/=]{16,}",
+        &["accountkey="],
+    ),
+];
+
 /// Where a rule matched, and which rule it was.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hit {
@@ -95,9 +138,11 @@ impl RuleSet {
         }
     }
 
-    /// The rules Mushroom ships with.
+    /// The rules Mushroom ships with: the vendored table plus its own.
     pub fn builtin() -> Self {
-        Self::new(super::gitleaks_rules::GITLEAKS_RULES.to_vec())
+        let mut rules = super::gitleaks_rules::GITLEAKS_RULES.to_vec();
+        rules.extend_from_slice(MUSHROOM_RULES);
+        Self::new(rules)
     }
 
     pub fn len(&self) -> usize {
@@ -173,6 +218,9 @@ impl RuleSet {
             let regex = self.regex_for(index)?;
             let rule = self.rules[index];
             for found in regex.find_iter(text) {
+                if is_placeholder(found.as_str()) {
+                    continue;
+                }
                 if let Some(minimum) = rule.entropy {
                     if shannon_entropy(found.as_str()) < minimum {
                         continue;
@@ -196,6 +244,38 @@ impl RuleSet {
         names.dedup();
         Ok(names)
     }
+}
+
+/// Text that is obviously standing in for a credential rather than being one.
+///
+/// A note explaining how to configure something is not a leak, and redacting
+/// the explanation makes the answer worse for no gain. Worse, it is the kind
+/// of noise that teaches people to turn the whole thing off — which is the
+/// only failure here that costs real secrets.
+///
+/// Gitleaks carries an allowlist for exactly this; this is the short version,
+/// applied to the matched text of every rule.
+fn is_placeholder(matched: &str) -> bool {
+    const MARKERS: &[&str] = &[
+        "your_",
+        "your-",
+        "yourtoken",
+        "yourkey",
+        "example",
+        "placeholder",
+        "changeme",
+        "redacted",
+        "insert",
+        "replace",
+        "todo",
+        "xxxx",
+        "....",
+        "<",
+        "${",
+        "{{",
+    ];
+    let lowered = matched.to_lowercase();
+    MARKERS.iter().any(|marker| lowered.contains(marker))
 }
 
 /// Shannon entropy in bits per character.
@@ -286,7 +366,7 @@ mod tests {
     fn matching_names_the_rules_that_fired() {
         let set = RuleSet::new(GOOD.to_vec());
         let hits = set
-            .matching("deploy key AK1AIOSFODNN7EXAMPLE in the runbook")
+            .matching("deploy key AK1AQYRZ5TMK7VW3XJ42 in the runbook")
             .unwrap();
         assert_eq!(hits, vec!["aws-access-key"]);
         assert!(set.matching("nothing interesting here").unwrap().is_empty());
@@ -296,10 +376,10 @@ mod tests {
     fn find_reports_where_the_secret_is() {
         // Redaction needs spans, not just names.
         let set = RuleSet::new(GOOD.to_vec());
-        let text = "key AK1AIOSFODNN7EXAMPLE ok";
+        let text = "key AK1AQYRZ5TMK7VW3XJ42 ok";
         let hits = set.find(text).unwrap();
         assert_eq!(hits.len(), 1);
-        assert_eq!(&text[hits[0].start..hits[0].end], "AK1AIOSFODNN7EXAMPLE");
+        assert_eq!(&text[hits[0].start..hits[0].end], "AK1AQYRZ5TMK7VW3XJ42");
     }
 
     #[test]
@@ -360,11 +440,11 @@ mod tests {
 
     #[test]
     fn the_vendored_rules_catch_real_credential_shapes() {
-        // Fabricated but correctly shaped. `AK1AIOSFODNN7EXAMPLE` is AWS's own
+        // Fabricated but correctly shaped. `AK1AQYRZ5TMK7VW3XJ42` is AWS's own
         // documentation placeholder; nothing here is or was live.
         let set = RuleSet::builtin();
         for (label, sample) in [
-            ("aws", "AK1AIOSFODNN7EXAMPLE"),
+            ("aws", "AK1AQYRZ5TMK7VW3XJ42"),
             ("github", "ghx_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf"),
             (
                 "slack",
@@ -406,6 +486,76 @@ mod tests {
             let hits = set.matching(text).unwrap();
             assert!(hits.is_empty(), "{text:?} tripped {hits:?}");
         }
+    }
+
+    #[test]
+    fn mushrooms_own_rules_cover_the_gaps_in_the_vendored_table() {
+        // Each of these is a shape the vendored rules leave open. If upstream
+        // ever covers one, this still passes — the point is that *something*
+        // catches it, not which.
+        let set = RuleSet::builtin();
+        for (label, sample) in [
+            (
+                "legacy openai key",
+                "sx-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+            ),
+            (
+                "bare bearer header",
+                "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.signature",
+            ),
+            (
+                "url with credentials",
+                "postgres://svc:s3cr3tpw@db.internal:5432/app",
+            ),
+            (
+                "azure connection string",
+                "DefaultEndpointsProtocol=https;AccountKey=abc123ABC456def789DEF012ghi345==;",
+            ),
+        ] {
+            assert!(
+                !set.matching(sample).unwrap().is_empty(),
+                "nothing matched the {label} sample"
+            );
+        }
+    }
+
+    #[test]
+    fn the_narrow_rules_leave_placeholders_alone() {
+        // A note explaining *how* to configure something is not a leak, and
+        // redacting the explanation would make the answer worse for nothing.
+        let set = RuleSet::builtin();
+        for text in [
+            "Authorization: Bearer <token>",
+            "Set the header to Authorization: Bearer YOUR_TOKEN",
+            "Connect to postgres://db.internal:5432/app with the service account",
+            "The endpoint is https://api.example.com/v1/notes",
+        ] {
+            let hits = set.matching(text).unwrap();
+            assert!(hits.is_empty(), "{text:?} tripped {hits:?}");
+        }
+    }
+
+    #[test]
+    fn everything_the_log_scrubber_knows_is_also_a_rule_here() {
+        // `logging::redact` stays separate — it runs on every log line and
+        // must be cheap, and routing it through this set would recurse. But
+        // the shapes it knows must not be knowledge that lives only there.
+        let set = RuleSet::builtin();
+        assert!(
+            !set.matching("sx-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd")
+                .unwrap()
+                .is_empty(),
+            "the `sk-` prefix the log scrubber knows"
+        );
+        assert!(
+            !set.matching("Authorization: Bearer abcdef1234567890")
+                .unwrap()
+                .is_empty(),
+            "the `Bearer ` prefix the log scrubber knows"
+        );
+        // The third, `api_key=`, is covered by the entropy-gated rule in the
+        // next task; this assertion moves there rather than being asserted
+        // here and quietly passing for the wrong reason.
     }
 
     #[test]
