@@ -101,7 +101,7 @@ HEADER = '''\
 // the shape they are stored in and which ones are included: a rule tuned for
 // scanning a source tree is not automatically right for scanning prose.
 
-use super::rules::Rule;
+use super::rules::{{Confidence, Rule}};
 
 /// Provider credential patterns, one per shape that does not occur by accident.
 pub const GITLEAKS_RULES: &[Rule] = &[
@@ -192,9 +192,9 @@ def main() -> int:
         # without one match on shape alone, which is enough for a prefix like
         # `AKIA` that does not occur by accident.
         lines.append(
-            f"        entropy: Some({float(entropy)}),"
+            f"        confidence: Confidence::Entropy({float(entropy)}),"
             if entropy is not None
-            else "        entropy: None,"
+            else "        confidence: Confidence::Shape,"
         )
         if keywords:
             joined = ", ".join(f'"{k}"' for k in keywords)

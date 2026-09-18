@@ -29,11 +29,8 @@ pub struct Rule {
     /// Appears in the marker the model sees: `[redacted: aws-access-key]`.
     pub name: &'static str,
     pub pattern: &'static str,
-    /// Minimum Shannon entropy the matched text must reach, when the shape
-    /// alone is not confidence enough. `None` means the shape is the whole
-    /// signal — `AKIA` followed by 16 upper-case characters does not occur by
-    /// accident, so no second opinion is needed.
-    pub entropy: Option<f64>,
+    /// What makes this rule confident enough to act on.
+    pub confidence: Confidence,
     /// Substrings that must appear for this rule to have any chance of
     /// matching, lower-case. This is what makes the set affordable: it turns
     /// "run 220 regexes" into "run the two that could possibly hit".
@@ -43,13 +40,32 @@ pub struct Rule {
     pub keywords: &'static [&'static str],
 }
 
+/// Why a rule believes what it matched.
+///
+/// Three kinds of evidence, kept apart because they fail differently and a
+/// single `Option<f64>` hid that. A reader should be able to tell at a glance
+/// which rules *recognise* and which *infer*.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Confidence {
+    /// The shape is the whole signal. `AKIA` followed by sixteen characters
+    /// from a restricted alphabet does not occur by accident.
+    Shape,
+    /// Gitleaks-style: the whole match must score at least this many bits per
+    /// character. Used where a shape is suggestive but not conclusive.
+    Entropy(f64),
+    /// Mushroom's own, for `password = …`: the *assigned value* must look
+    /// random for its length. See [`looks_random`]. This is the one rule that
+    /// guesses, so it is named rather than hidden behind a number.
+    RandomValue,
+}
+
 impl Rule {
     /// A rule that matches on shape alone and is always a candidate.
     pub const fn new(name: &'static str, pattern: &'static str) -> Self {
         Self {
             name,
             pattern,
-            entropy: None,
+            confidence: Confidence::Shape,
             keywords: &[],
         }
     }
@@ -63,7 +79,21 @@ impl Rule {
         Self {
             name,
             pattern,
-            entropy: None,
+            confidence: Confidence::Shape,
+            keywords,
+        }
+    }
+
+    /// A rule whose confidence comes from the randomness of what it captured.
+    pub const fn random_value(
+        name: &'static str,
+        pattern: &'static str,
+        keywords: &'static [&'static str],
+    ) -> Self {
+        Self {
+            name,
+            pattern,
+            confidence: Confidence::RandomValue,
             keywords,
         }
     }
@@ -109,6 +139,31 @@ pub const MUSHROOM_RULES: &[Rule] = &[
         "azure-connection-key",
         r"(?i)accountkey=[A-Za-z0-9+/=]{16,}",
         &["accountkey="],
+    ),
+    // The one rule that guesses. `password = <something random-looking>`.
+    //
+    // This replaces gitleaks' `generic-api-key`, dropped for being tuned to
+    // source trees. The difference is the test in `looks_random`: a note that
+    // says `password: see the vault` keeps its sentence, one that says
+    // `password: xQ7vMz2Lp9rTn4` does not.
+    //
+    // Capture group 1 is the value, and it is what gets judged — the keyword
+    // in front adds the same characters whether or not a secret follows, so
+    // scoring the whole match only adds noise.
+    Rule::random_value(
+        "assigned-secret",
+        r#"(?i)\b(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|client_secret|access_key)\b\s*[:=]\s*["']?([^\s"',;]{8,})"#,
+        &[
+            "password",
+            "passwd",
+            "pwd",
+            "secret",
+            "token",
+            "api_key",
+            "api-key",
+            "apikey",
+            "access_key",
+        ],
     ),
 ];
 
@@ -221,9 +276,26 @@ impl RuleSet {
                 if is_placeholder(found.as_str()) {
                     continue;
                 }
-                if let Some(minimum) = rule.entropy {
-                    if shannon_entropy(found.as_str()) < minimum {
-                        continue;
+                match rule.confidence {
+                    Confidence::Shape => {}
+                    Confidence::Entropy(minimum) => {
+                        if shannon_entropy(found.as_str()) < minimum {
+                            continue;
+                        }
+                    }
+                    Confidence::RandomValue => {
+                        // Judge the captured value, not the keyword in front
+                        // of it. No capture means the rule is misdeclared,
+                        // and skipping is the safe reading of that.
+                        let Some(value) = regex
+                            .captures(&text[found.start()..found.end()])
+                            .and_then(|c| c.get(1))
+                        else {
+                            continue;
+                        };
+                        if !looks_random(value.as_str()) {
+                            continue;
+                        }
                     }
                 }
                 hits.push(Hit {
@@ -244,6 +316,41 @@ impl RuleSet {
         names.dedup();
         Ok(names)
     }
+}
+
+/// Whether an assigned value looks like a credential rather than a sentence.
+///
+/// Entropy alone does not work here, and a test proved it: a twelve-letter
+/// English word repeats almost nothing, so `secret: confidential` scores 3.19
+/// bits — indistinguishable from a random token by that measure. Redacting it
+/// would be a false positive on a perfectly ordinary note.
+///
+/// What separates the two is *character classes*. Generated credentials mix
+/// digits with letters, or carry symbols; English words do neither. So the
+/// test is: long enough, random enough, **and** built from a mixture no word
+/// is.
+///
+/// `hunter2` surviving this is deliberate. At seven characters it is
+/// indistinguishable from prose, and widening the net far enough to catch it
+/// would redact a great deal of ordinary writing — which is exactly why the
+/// documentation says detection is best-effort and exclusion is the control
+/// that actually works.
+pub fn looks_random(value: &str) -> bool {
+    let length = value.chars().count();
+    if length < 12 {
+        return false;
+    }
+
+    let has_digit = value.chars().any(|c| c.is_ascii_digit());
+    let has_alpha = value.chars().any(|c| c.is_alphabetic());
+    let has_symbol = value.chars().any(|c| !c.is_alphanumeric());
+    // A word is all letters. A token is not.
+    if !((has_digit && has_alpha) || has_symbol) {
+        return false;
+    }
+
+    let entropy = shannon_entropy(value);
+    (length >= 12 && entropy > 3.0) || (length >= 20 && entropy > 2.5)
 }
 
 /// Text that is obviously standing in for a credential rather than being one.
@@ -556,6 +663,96 @@ mod tests {
         // The third, `api_key=`, is covered by the entropy-gated rule in the
         // next task; this assertion moves there rather than being asserted
         // here and quietly passing for the wrong reason.
+    }
+
+    #[test]
+    fn an_assigned_secret_is_redacted_when_the_value_looks_random() {
+        let set = RuleSet::builtin();
+        for text in [
+            "password: xQ7vMz2Lp9rTn4Kw8Bd6",
+            "api_key = 9f8a7b6c5d4e3f2a1b0c9d8e",
+            "client_secret=Zr4Tn8Kw2Bd6Hs3Yj5Gf1Ac0Qp7",
+        ] {
+            assert!(
+                set.matching(text).unwrap().contains(&"assigned-secret"),
+                "{text:?} was not caught"
+            );
+        }
+    }
+
+    #[test]
+    fn an_assigned_secret_is_left_alone_when_the_value_is_prose() {
+        // These are sentences people actually write. Redacting them makes
+        // answers worse and teaches the user to switch the feature off.
+        let set = RuleSet::builtin();
+        for text in [
+            "password: see the vault",
+            "password is in the password manager",
+            "api_key = REPLACE_ME",
+            "secret: ask Priya",
+        ] {
+            let hits = set.matching(text).unwrap();
+            assert!(
+                !hits.contains(&"assigned-secret"),
+                "{text:?} tripped {hits:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_ordinary_long_word_is_not_mistaken_for_a_secret() {
+        // The case that forced the character-class test. By entropy alone
+        // `confidential` scores above the threshold, because a twelve-letter
+        // word repeats almost nothing — so entropy alone would redact it.
+        assert!(shannon_entropy("confidential") > 3.0, "precondition");
+        assert!(!looks_random("confidential"));
+        assert!(!looks_random("documentation"));
+        assert!(!looks_random("authorization"));
+
+        let set = RuleSet::builtin();
+        for text in [
+            "secret: confidential",
+            "token: authorization",
+            "password: documentation",
+        ] {
+            let hits = set.matching(text).unwrap();
+            assert!(
+                !hits.contains(&"assigned-secret"),
+                "{text:?} tripped {hits:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn hunter2_survives_and_that_is_deliberate() {
+        // Seven characters is indistinguishable from prose. Catching it would
+        // mean redacting a great deal of ordinary writing — which is why the
+        // documentation says exclusion is the control that actually works.
+        let set = RuleSet::builtin();
+        assert!(!set
+            .matching("password: hunter2")
+            .unwrap()
+            .contains(&"assigned-secret"));
+    }
+
+    #[test]
+    fn the_randomness_test_needs_length_and_a_mixture() {
+        assert!(looks_random("xQ7vMz2Lp9rTn4"));
+        assert!(!looks_random("xQ7vMz2"), "too short");
+        assert!(!looks_random("aaaaaaaaaaaaaaaaaaaaaaaa"), "no variety");
+        assert!(!looks_random("confidentialities"), "letters only");
+        assert!(looks_random("abcdefghijkl012345"), "letters and digits");
+    }
+
+    #[test]
+    fn the_log_scrubbers_third_prefix_is_covered_here() {
+        // `everything_the_log_scrubber_knows_is_also_a_rule_here` deferred
+        // `api_key=` to this task. This is it.
+        let set = RuleSet::builtin();
+        assert!(set
+            .matching("api_key=9f8a7b6c5d4e3f2a1b0c")
+            .unwrap()
+            .contains(&"assigned-secret"));
     }
 
     #[test]
