@@ -472,3 +472,68 @@ mod tests {
         assert!(!report.is_clean());
     }
 }
+
+#[cfg(test)]
+mod value_escape_tests {
+    use super::*;
+    use crate::ai::provider::Message;
+
+    /// R3.5 — the matched value never leaves this module.
+    ///
+    /// The thing being protected must not turn up in a report, an event, a log
+    /// line or an error on the way to protecting it. The report carries a rule
+    /// name and a count and nothing else, by construction; this is the test
+    /// that says so out loud, and it checks the serialised form because that
+    /// is what actually crosses to the window.
+    #[test]
+    fn the_matched_value_never_reaches_the_report() {
+        const SECRET: &str = "AK1AQYRZ5TMK7VW3XJ42";
+
+        let request = ChatRequest {
+            model: "test-model".into(),
+            messages: vec![Message::user(&format!(
+                "the runner used {SECRET} until it was rotated"
+            ))],
+            temperature: None,
+            max_tokens: None,
+            sources: Vec::new(),
+        };
+
+        let sanitised = sanitise(request, &Policy::new(PrivacyMode::Redact)).unwrap();
+
+        let report = serde_json::to_string(sanitised.report()).unwrap();
+        assert!(
+            !report.contains(SECRET),
+            "the value reached the report: {report}"
+        );
+        // Gitleaks calls it `aws-access-token`; the marker uses the rule's
+        // own name so a reader can look it up.
+        assert!(
+            report.contains("aws-access-token"),
+            "the rule name should reach the report: {report}"
+        );
+
+        // And the request itself carries the marker rather than the value.
+        let sent = &sanitised.request().messages[0].content;
+        assert!(!sent.contains(SECRET), "{sent}");
+        assert!(sent.contains("[redacted: aws-access-token]"), "{sent}");
+        assert!(
+            sent.contains("until it was rotated"),
+            "prose survives: {sent}"
+        );
+    }
+
+    #[test]
+    fn a_privacy_error_never_carries_the_request() {
+        let policy = Policy::with_rules(PrivacyMode::Redact, Rules::broken("table did not load"));
+        let request = ChatRequest {
+            model: "m".into(),
+            messages: vec![Message::user("the password is AK1AQYRZ5TMK7VW3XJ42")],
+            temperature: None,
+            max_tokens: None,
+            sources: Vec::new(),
+        };
+        let message = sanitise(request, &policy).unwrap_err().to_string();
+        assert!(!message.contains("AK1AQYRZ5TMK7VW3XJ42"), "{message}");
+    }
+}
