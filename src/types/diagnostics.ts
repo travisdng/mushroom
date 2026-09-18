@@ -41,6 +41,11 @@ export type AiInfo = {
   requests: number;
   totalTokens: number;
   failures: number;
+  /** How hard the privacy gate is trying: redact, block or off. */
+  privacyMode: string;
+  exclusionRules: number;
+  /** Detection rules switched off, by name. */
+  disabledRules: string[];
 };
 
 export type Diagnostics = {

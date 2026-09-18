@@ -59,6 +59,9 @@ pub fn get_diagnostics(state: tauri::State<'_, AppState>) -> Diagnostics {
             requests: usage.requests,
             total_tokens: usage.total_tokens,
             failures: usage.failures,
+            privacy_mode: ai_config.privacy_mode.as_str().to_string(),
+            exclusion_rules: ai_config.ai_exclusions.len(),
+            disabled_rules: ai_config.ai_disabled_rules.clone(),
         },
     }
 }

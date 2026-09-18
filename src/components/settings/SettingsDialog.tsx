@@ -548,8 +548,10 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           </label>
         </div>
         <div className="settings__note">
-          Off by default. Prompts contain your note text, so only turn this on
-          while diagnosing a problem.
+          Off by default. This writes your note text to a file on disk
+          (<code>logs\mushroom.log</code>), so only turn it on while diagnosing
+          a problem, and turn it off after. Credentials are removed first, but
+          everything else in the note is written as it is.
         </div>
       </fieldset>
 

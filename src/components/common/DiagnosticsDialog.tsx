@@ -130,6 +130,19 @@ export function DiagnosticsDialog({
                   "This session",
                   `${info.ai.requests} requests, ${info.ai.totalTokens.toLocaleString()} tokens, ${info.ai.failures} failed`,
                 ],
+                [
+                  "Privacy",
+                  // The first question when a key was not redacted is "what
+                  // mode was it in", so it goes here rather than two dialogs
+                  // away in Settings.
+                  `${info.ai.privacyMode}, ${info.ai.exclusionRules} exclusion ${
+                    info.ai.exclusionRules === 1 ? "rule" : "rules"
+                  }, ${
+                    info.ai.disabledRules.length === 0
+                      ? "no rules switched off"
+                      : `${info.ai.disabledRules.length} switched off: ${info.ai.disabledRules.join(", ")}`
+                  }`,
+                ],
               ]}
             />
             <div className="diagnostics__actions">

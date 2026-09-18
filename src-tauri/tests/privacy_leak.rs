@@ -329,3 +329,79 @@ async fn a_credential_typed_into_the_question_is_not_sent() {
         );
     }
 }
+
+/// R6.1, R9.4 — `log_prompts` writes the *sanitised* prompt.
+///
+/// Turning on prompt logging to debug a bad answer used to write every
+/// retrieved excerpt — credentials included — to a plain text file that
+/// `Copy Diagnostics` does not read but a support request might attach. The
+/// setting now logs what was sent, not what was retrieved.
+#[tokio::test]
+async fn log_prompts_cannot_write_a_credential_to_the_log() {
+    use std::sync::OnceLock;
+    use tracing_subscriber::prelude::*;
+
+    /// The log, captured in memory. A `Mutex<Vec<u8>>` behind the writer that
+    /// `tracing` would otherwise point at a file.
+    static CAPTURED: OnceLock<Arc<Mutex<Vec<u8>>>> = OnceLock::new();
+
+    let captured = Arc::clone(CAPTURED.get_or_init(|| Arc::new(Mutex::new(Vec::new()))));
+
+    struct Sink(Arc<Mutex<Vec<u8>>>);
+    impl std::io::Write for Sink {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(buf);
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    let sink = Arc::clone(&captured);
+    // Best-effort: another test in this binary may have installed one first,
+    // and the assertion below still holds either way.
+    let _ = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(move || Sink(Arc::clone(&sink)))
+                .with_ansi(false),
+        )
+        .with(tracing_subscriber::filter::LevelFilter::DEBUG)
+        .try_init();
+
+    let (_dir, root, db) = corpus();
+    let (server, bodies) = recording_server().await;
+
+    let ai = Arc::new(AiService::new(AiConfig {
+        base_url: server.uri(),
+        model: "test-model".into(),
+        timeout_secs: 10,
+        configured: true,
+        log_prompts: true,
+        ..AiConfig::default()
+    }));
+
+    ask(
+        "what credentials were involved in the GPU incident?",
+        ai,
+        indexed(&root, &db),
+    )
+    .await;
+
+    // Precondition: the request really was made, or this proves nothing.
+    assert!(!bodies.lock().unwrap().is_empty(), "nothing was sent");
+
+    let log = String::from_utf8_lossy(&captured.lock().unwrap().clone()).to_string();
+    assert!(
+        !log.is_empty(),
+        "no log was captured, so this would pass for the wrong reason"
+    );
+    for planted in PLANTED {
+        assert!(
+            !log.contains(planted.value),
+            "{} reached the log with log_prompts on",
+            planted.rule
+        );
+    }
+}

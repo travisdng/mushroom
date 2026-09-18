@@ -70,6 +70,12 @@ pub struct AiInfo {
     pub requests: u32,
     pub total_tokens: u64,
     pub failures: u32,
+    /// How hard the privacy gate is trying: `redact`, `block` or `off`.
+    pub privacy_mode: String,
+    pub exclusion_rules: usize,
+    /// Detection rules the user has switched off. Named, because "3 rules
+    /// disabled" is not something anybody can act on.
+    pub disabled_rules: Vec<String>,
 }
 
 /// Render the report a person can paste into a message.
@@ -135,6 +141,25 @@ pub fn render(diagnostics: &Diagnostics) -> String {
     out.push_str(&format!("  Requests:       {}\n", ai.requests));
     out.push_str(&format!("  Tokens:         {}\n", ai.total_tokens));
     out.push_str(&format!("  Failures:       {}\n", ai.failures));
+    out.push_str(&format!(
+        "  Privacy mode:   {}
+",
+        ai.privacy_mode
+    ));
+    out.push_str(&format!(
+        "  Exclusions:     {}
+",
+        ai.exclusion_rules
+    ));
+    out.push_str(&format!(
+        "  Rules off:      {}
+",
+        if ai.disabled_rules.is_empty() {
+            "none".to_string()
+        } else {
+            ai.disabled_rules.join(", ")
+        }
+    ));
 
     // Say what it does carry as well as what it does not. The endpoint is the
     // single most useful line for diagnosing an AI problem, so it stays — but
@@ -191,8 +216,21 @@ mod tests {
                 requests: 7,
                 total_tokens: 4200,
                 failures: 1,
+                privacy_mode: "redact".into(),
+                exclusion_rules: 2,
+                disabled_rules: vec!["jwt".into()],
             },
         }
+    }
+
+    #[test]
+    fn the_report_says_what_the_privacy_gate_is_doing() {
+        // Somebody debugging "why did it not redact my key" needs to know the
+        // mode and which rules are off before anything else.
+        let report = render(&sample());
+        assert!(report.contains("Privacy mode:   redact"), "{report}");
+        assert!(report.contains("Exclusions:     2"), "{report}");
+        assert!(report.contains("Rules off:      jwt"), "{report}");
     }
 
     #[test]
