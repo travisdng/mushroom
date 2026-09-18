@@ -31,8 +31,9 @@ use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 /// A credential planted in the corpus.
 ///
 /// `value` is what must never appear on the wire. `rule` is the rule expected
-/// to catch it, named so a failure says which pattern is missing rather than
-/// just "something leaked".
+/// to catch it, using the rule's **real** name so a failure names a pattern
+/// somebody can go and look at — an invented label would send them hunting for
+/// a rule that does not exist.
 struct Planted {
     rule: &'static str,
     value: &'static str,
@@ -47,19 +48,19 @@ struct Planted {
 /// live credential.
 const PLANTED: &[Planted] = &[
     Planted {
-        rule: "aws-access-key",
+        rule: "aws-access-token",
         value: "AK1AQYRZ5TMK7VW3XJ42",
     },
     Planted {
-        rule: "github-token",
+        rule: "github-pat",
         value: "ghx_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf",
     },
     Planted {
-        rule: "slack-token",
+        rule: "slack-bot-token",
         value: "xoxz-2345678901-2345678901234-AbCdEfGhIjKlMnOpQrStUvWx",
     },
     Planted {
-        rule: "google-api-key",
+        rule: "gcp-api-key",
         value: "AIzbSyD1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P",
     },
     Planted {
@@ -71,7 +72,7 @@ const PLANTED: &[Planted] = &[
         value: "xQ7vMz2Lp9rTn4Kw8Bd6Hs3Yj5Gf1Ac0",
     },
     Planted {
-        rule: "private-key-block",
+        rule: "private-key",
         // The `private-key` rule wants at least 64 characters between the
         // BEGIN and END markers. An earlier fixture had 60, so the harness
         // would have reported this kind as caught without the rule ever
@@ -292,4 +293,39 @@ async fn the_answer_is_still_possible_after_redaction() {
         all.contains("orchestrator"),
         "the surrounding prose must still reach the model"
     );
+}
+
+/// R1.4, R3.7 — a credential the user types is sanitised too.
+///
+/// The question field is note content by another name: people paste a key into
+/// it and ask "is this the one that leaked?". What they typed is kept locally,
+/// in the question history, exactly as typed — the store and the wire are
+/// allowed to differ, and only the wire is scrubbed.
+#[tokio::test]
+async fn a_credential_typed_into_the_question_is_not_sent() {
+    const TYPED: &str = "AK1A2345TMK7VW3XJ42Q";
+
+    let (_dir, root, db) = corpus();
+    let (server, bodies) = recording_server().await;
+
+    ask(
+        &format!("is {TYPED} the GPU key that leaked?"),
+        ai_for(&server),
+        indexed(&root, &db),
+    )
+    .await;
+
+    let sent = bodies.lock().unwrap();
+    assert!(!sent.is_empty(), "the question should have been sent");
+    for body in sent.iter() {
+        assert!(
+            !body.contains(TYPED),
+            "a key typed into the question reached the endpoint"
+        );
+        // The rest of the question must survive, or the model cannot answer.
+        assert!(
+            body.contains("the GPU key that leaked"),
+            "the question itself should still be there"
+        );
+    }
 }
