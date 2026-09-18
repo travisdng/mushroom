@@ -35,6 +35,14 @@ pub struct AiConfig {
     /// refuses `stream: true` is fallen back on automatically, so this only
     /// needs turning off to force the one-shot path.
     pub stream: bool,
+    /// How hard the privacy gate tries before anything is sent.
+    ///
+    /// Not in the credential store: it is a preference, not a secret. The
+    /// struct-level `#[serde(default)]` means a config file written by 1.0.x
+    /// lands on `Redact` rather than on whatever is first in the enum — an
+    /// upgrade must never quietly turn the gate off (spec 08 R4.5).
+    pub privacy_mode: crate::ai::privacy::PrivacyMode,
+
     /// Whether the user has ever applied AI settings.
     ///
     /// Not derivable from the other fields: `base_url` and `model` always hold
@@ -57,6 +65,7 @@ impl Default for AiConfig {
             temperature: 0.2,
             log_prompts: false,
             stream: true,
+            privacy_mode: crate::ai::privacy::PrivacyMode::Redact,
             configured: false,
         }
     }

@@ -7,6 +7,7 @@ pub mod citations;
 pub mod client;
 pub mod context;
 pub mod error;
+pub mod privacy;
 pub mod provider;
 pub mod question;
 pub mod search;

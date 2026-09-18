@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use mushroom_lib::ai::client::{AiClient, StreamSink};
 use mushroom_lib::ai::error::AiError;
+use mushroom_lib::ai::privacy::{self, Policy, SanitisedRequest};
 use mushroom_lib::ai::provider::{ChatRequest, Message, Provider};
 use mushroom_lib::config::AiConfig;
 use tokio_util::sync::CancellationToken;
@@ -25,13 +26,23 @@ fn config_for(server: &MockServer) -> AiConfig {
     }
 }
 
-fn request() -> ChatRequest {
-    ChatRequest {
-        model: "test-model".into(),
-        messages: vec![Message::user("hello")],
-        temperature: Some(0.2),
-        max_tokens: Some(64),
-    }
+/// A request that has been through the privacy gate, because that is the only
+/// kind the client accepts.
+///
+/// Note that this goes through `privacy::sanitise` like the real code does.
+/// The sealed type has no test-only constructor on purpose: a back door here
+/// would be a back door everywhere.
+fn request() -> SanitisedRequest {
+    privacy::sanitise(
+        ChatRequest {
+            model: "test-model".into(),
+            messages: vec![Message::user("hello")],
+            temperature: Some(0.2),
+            max_tokens: Some(64),
+        },
+        &Policy::default(),
+    )
+    .expect("sanitising a plain request cannot fail")
 }
 
 fn completion_body(content: &str) -> serde_json::Value {
@@ -802,4 +813,46 @@ fn nothing_outside_ai_talks_http() {
         offenders.is_empty(),
         "HTTP belongs in src/ai/ only; found reqwest in: {offenders:?}"
     );
+}
+
+/// `test_connection` is exempt from the `SanitisedRequest` seal, because it
+/// sends a fixed literal rather than anything the user wrote. This pins that
+/// claim: if it ever starts echoing note content, a token in its signature
+/// would be ceremony, but this fails the build.
+#[tokio::test]
+async fn test_connection_sends_nothing_but_its_own_ping() {
+    let server = MockServer::start().await;
+    let body: Arc<Mutex<Option<serde_json::Value>>> = Arc::new(Mutex::new(None));
+    let captured = Arc::clone(&body);
+
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(move |req: &Request| {
+            *captured.lock().unwrap() = serde_json::from_slice(&req.body).ok();
+            ResponseTemplate::new(200).set_body_json(completion_body("pong"))
+        })
+        .mount(&server)
+        .await;
+
+    let config = AiConfig {
+        configured: true,
+        ..config_for(&server)
+    };
+    AiClient::new(config, None)
+        .unwrap()
+        .test_connection()
+        .await
+        .unwrap();
+
+    let sent = body.lock().unwrap().clone().expect("a body was sent");
+    let messages = sent["messages"].as_array().expect("messages is an array");
+
+    assert_eq!(messages.len(), 1, "one message, not a conversation: {sent}");
+    assert_eq!(
+        messages[0]["content"].as_str(),
+        Some("ping"),
+        "test_connection must send its own literal and nothing else: {sent}"
+    );
+    // A connectivity check has no business asking for a completion either.
+    assert_eq!(sent["max_tokens"].as_u64(), Some(1), "{sent}");
 }

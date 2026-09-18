@@ -13,6 +13,7 @@ use serde_json::json;
 use tokio_util::sync::CancellationToken;
 
 use crate::ai::error::AiError;
+use crate::ai::privacy::SanitisedRequest;
 use crate::ai::provider::{ChatRequest, ChatResponse, ConnectionInfo, Message, Role, Usage};
 use crate::ai::stream::{Frame, SseParser};
 use crate::config::AiConfig;
@@ -204,11 +205,17 @@ impl AiClient {
     }
 
     /// A whole answer in one response.
+    /// A one-shot completion.
+    ///
+    /// Takes a [`SanitisedRequest`] rather than a `ChatRequest`: the only way
+    /// to get one is [`crate::ai::privacy::sanitise`], so a path that forgets
+    /// the privacy gate cannot compile. See `ai/privacy/mod.rs`.
     pub async fn chat(
         &self,
-        request: ChatRequest,
+        request: SanitisedRequest,
         cancel: CancellationToken,
     ) -> Result<ChatResponse, AiError> {
+        let request = request.request();
         // Checked before the select, not inside it: `select!` polls its
         // branches in a random order, so an already-cancelled request could
         // otherwise still be put on the wire before the cancel branch wins.
@@ -217,7 +224,7 @@ impl AiClient {
         }
 
         let started = std::time::Instant::now();
-        let body = self.body(&request, false);
+        let body = self.body(request, false);
         let url = self.config.chat_url();
 
         let response = tokio::select! {
@@ -248,18 +255,20 @@ impl AiClient {
     ///
     /// Returns the assembled response too, so a caller gets usage and the full
     /// text without having to re-accumulate the deltas itself.
+    /// A streamed completion. Sealed for the same reason as [`Self::chat`].
     pub async fn stream_chat(
         &self,
-        request: ChatRequest,
+        request: SanitisedRequest,
         mut sink: StreamSink,
         cancel: CancellationToken,
     ) -> Result<ChatResponse, AiError> {
+        let request = request.request();
         if cancel.is_cancelled() {
             return Err(AiError::Cancelled);
         }
 
         let started = std::time::Instant::now();
-        let body = self.body(&request, true);
+        let body = self.body(request, true);
         let url = self.config.chat_url();
 
         let response = tokio::select! {
@@ -312,7 +321,7 @@ impl AiClient {
 
         Ok(ChatResponse {
             content: assembled,
-            model: parser.model.unwrap_or(request.model),
+            model: parser.model.unwrap_or_else(|| request.model.clone()),
             usage: parser.usage,
             latency_ms: started.elapsed().as_millis() as u64,
         })

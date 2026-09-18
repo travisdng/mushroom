@@ -42,6 +42,20 @@ pub enum AiError {
 
     #[error("cancelled")]
     Cancelled,
+
+    /// The privacy gate could not run. Nothing was sent, and nothing will be:
+    /// sending unscanned note content because the scanner is broken is the one
+    /// outcome that design must never produce (spec 08 R1.5, R8.2).
+    #[error("the privacy gate could not run")]
+    Privacy { detail: String },
+}
+
+impl From<crate::ai::privacy::PrivacyError> for AiError {
+    fn from(err: crate::ai::privacy::PrivacyError) -> Self {
+        AiError::Privacy {
+            detail: err.to_string(),
+        }
+    }
 }
 
 impl AiError {
@@ -248,6 +262,20 @@ impl From<&AiError> for AppErrorDto {
                 "Stopped",
                 "The request was stopped.".to_string(),
                 None,
+            ),
+
+            // Deliberately reads as "nothing was sent" rather than as a
+            // generic failure: the useful fact for the person reading it is
+            // that their notes did not leave the machine.
+            AiError::Privacy { .. } => (
+                "AI_PRIVACY_GATE",
+                "Nothing was sent",
+                "Mushroom could not check this request for credentials, so it did not send it."
+                    .to_string(),
+                Some(
+                    "Your notes and local search are unaffected. See Tools \u{2192} Diagnostics."
+                        .to_string(),
+                ),
             ),
         };
 

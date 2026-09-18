@@ -11,6 +11,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::ai::client::{AiClient, StreamSink};
 use crate::ai::error::AiError;
+use crate::ai::privacy::{self, Policy, PrivacyReport, SanitisedRequest};
 use crate::ai::provider::{ChatRequest, ChatResponse, ConnectionInfo};
 use crate::config::{secrets, AiConfig};
 
@@ -98,6 +99,14 @@ impl AiService {
         self.last_connection.lock().ok().and_then(|c| c.clone())
     }
 
+    /// The privacy policy currently in force.
+    ///
+    /// Read per request rather than cached, so a mode changed in Settings
+    /// takes effect on the next question rather than the next launch.
+    fn policy(&self) -> Policy {
+        Policy::new(self.config().privacy_mode)
+    }
+
     /// A one-shot completion, with the usage line written for it.
     pub async fn chat(
         &self,
@@ -105,6 +114,7 @@ impl AiService {
         cancel: CancellationToken,
     ) -> Result<ChatResponse, AiError> {
         let client = self.client()?;
+        let request = privacy::sanitise(request, &self.policy())?;
         self.log_request(&request);
 
         let outcome = client.chat(request, cancel).await;
@@ -120,6 +130,7 @@ impl AiService {
         cancel: CancellationToken,
     ) -> Result<ChatResponse, AiError> {
         let client = self.client()?;
+        let request = privacy::sanitise(request, &self.policy())?;
         self.log_request(&request);
 
         let outcome = client.stream_chat(request, sink, cancel).await;
@@ -221,23 +232,31 @@ impl AiService {
 
     /// Log what was asked for — never the prompt itself unless the user has
     /// turned that on, because a prompt is note content (R6.9, R2.2).
-    fn log_request(&self, request: &ChatRequest) {
+    ///
+    /// Takes the *sanitised* request, so `log_prompts` cannot write a
+    /// credential to a file on disk that `Copy Diagnostics` does not read but
+    /// a support request might attach (spec 08 R6.1).
+    fn log_request(&self, request: &SanitisedRequest) {
         let config = self.config();
+        let report = request.report();
         tracing::info!(
             target: "ai",
             host = %host_of(&config.base_url),
-            model = %request.model,
-            messages = request.messages.len(),
+            model = %request.model(),
+            messages = request.request().messages.len(),
+            privacy_mode = report.mode.as_str(),
             "sending request"
         );
 
+        log_privacy(report);
+
         if config.log_prompts {
-            for message in &request.messages {
+            for message in &request.request().messages {
                 tracing::debug!(
                     target: "ai",
                     role = ?message.role,
                     content = %message.content,
-                    "prompt (log_prompts is on)"
+                    "prompt (log_prompts is on, and this text is sanitised)"
                 );
             }
         }
@@ -280,6 +299,38 @@ impl AiService {
                 );
             }
         }
+    }
+}
+
+/// Log what the gate did: rule names and counts, never a matched value.
+///
+/// The value is the thing being protected, so it does not reach a log file on
+/// the way to protecting it (spec 08 R3.5, R6.2).
+fn log_privacy(report: &PrivacyReport) {
+    if report.is_clean() {
+        return;
+    }
+    for redaction in &report.redactions {
+        tracing::info!(
+            target: "ai",
+            rule = %redaction.rule,
+            count = redaction.count,
+            "redacted before sending"
+        );
+    }
+    if !report.withheld.is_empty() {
+        tracing::info!(
+            target: "ai",
+            withheld = report.withheld.len(),
+            "withheld before sending"
+        );
+    }
+    if report.excluded_notes > 0 {
+        tracing::info!(
+            target: "ai",
+            notes = report.excluded_notes,
+            "notes excluded from this request"
+        );
     }
 }
 
