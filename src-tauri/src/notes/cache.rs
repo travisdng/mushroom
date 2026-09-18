@@ -292,6 +292,7 @@ mod tests {
             modified,
             size_bytes: 0,
             tags: vec![],
+            ai_excluded: false,
         }
     }
 

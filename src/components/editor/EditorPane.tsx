@@ -36,18 +36,34 @@ export function EditorPane({
     );
   }
 
-  if (mode === "preview") return <MarkdownPreview source={debouncedBody} />;
-  if (mode === "edit") return <NoteEditor />;
+  const content =
+    mode === "preview" ? (
+      <MarkdownPreview source={debouncedBody} />
+    ) : mode === "edit" ? (
+      <NoteEditor />
+    ) : (
+      <div className="split-view">
+        <div className="split-half">
+          <NoteEditor />
+        </div>
+        <div className="split-divider" aria-hidden="true" />
+        <div className="split-half">
+          <MarkdownPreview source={debouncedBody} />
+        </div>
+      </div>
+    );
 
+  if (!open.meta.aiExcluded) return content;
+
+  // Shown in every mode, and shown as a fact rather than a warning: excluding
+  // a note is a thing the user did on purpose, not a problem to fix.
   return (
-    <div className="split-view">
-      <div className="split-half">
-        <NoteEditor />
+    <div className="editor-with-notice">
+      <div className="editor-notice">
+        This note is not sent to AI. Remove <code>ai: false</code> from its
+        frontmatter to include it.
       </div>
-      <div className="split-divider" aria-hidden="true" />
-      <div className="split-half">
-        <MarkdownPreview source={debouncedBody} />
-      </div>
+      {content}
     </div>
   );
 }

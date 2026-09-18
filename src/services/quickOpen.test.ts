@@ -12,6 +12,7 @@ function note(id: string, title: string, folder = ""): NoteMeta {
     modified: 0,
     sizeBytes: 0,
     tags: [],
+    aiExcluded: false,
   };
 }
 

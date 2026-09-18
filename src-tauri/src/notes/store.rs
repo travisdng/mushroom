@@ -148,6 +148,7 @@ pub fn read(root: &Path, id: &NoteId) -> Result<ReadNote, AppError> {
             modified: mtime_seconds(&fs_meta),
             size_bytes: fs_meta.len(),
             tags: split.frontmatter.tags.clone(),
+            ai_excluded: split.frontmatter.ai_excluded,
         },
         body: split.body,
         frontmatter: split.frontmatter.raw,
@@ -312,6 +313,7 @@ fn scan_one(
         modified: mtime_seconds(fs_meta),
         size_bytes: fs_meta.len(),
         tags: split.frontmatter.tags,
+        ai_excluded: split.frontmatter.ai_excluded,
     })
 }
 

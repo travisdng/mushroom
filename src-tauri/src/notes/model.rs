@@ -63,6 +63,14 @@ pub struct NoteMeta {
     pub modified: i64,
     pub size_bytes: u64,
     pub tags: Vec<String>,
+    /// The user marked this note `ai: false` or `private: true`.
+    ///
+    /// Carried to the window so the list and the editor can say so. An
+    /// excluded note is otherwise completely ordinary — listed, editable,
+    /// saveable, and found by keyword search. What it is kept out of is the
+    /// network (spec 08 R2.4, R2.5).
+    #[serde(default)]
+    pub ai_excluded: bool,
 }
 
 /// A note opened for editing.

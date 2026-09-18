@@ -62,8 +62,25 @@
 }
 
 .tree-row[data-selected="true"] .tree-count,
-.list-row[data-selected="true"] .list-folder {
+.list-row[data-selected="true"] .list-folder,
+.list-row[data-selected="true"] .list-tag {
   color: var(--selection-text);
+}
+
+/* "no AI" beside a note the user excluded. A sunken 1px box, like a status-bar
+   cell — not a coloured pill. The state must read in greyscale and on a navy
+   selected row, so it is spelled out rather than signalled. */
+.list-tag {
+  flex: none;
+  margin-left: 6px;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 13px;
+  color: var(--text-disabled);
+  border-top: 1px solid var(--bevel-shadow);
+  border-left: 1px solid var(--bevel-shadow);
+  border-right: 1px solid var(--bevel-light);
+  border-bottom: 1px solid var(--bevel-light);
 }
 
 /* Date separator in the note list. */
@@ -234,4 +251,29 @@
   box-shadow:
     inset -1px -1px 0 var(--bevel-shadow),
     inset 1px 1px 0 var(--bevel-face);
+}
+
+/* A note the user has kept out of the AI. Stated plainly at the top of the
+   editor in every view mode. Grey on grey, like a 1997 read-only banner — not
+   a yellow warning strip, because nothing is wrong. */
+.editor-with-notice {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-notice {
+  flex: none;
+  padding: 2px 6px;
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--bevel-shadow);
+  color: var(--text);
+}
+
+.editor-notice code {
+  font-family: var(--font-mono);
+  background: var(--field-bg);
+  border: 1px solid var(--bevel-shadow);
+  padding: 0 2px;
 }

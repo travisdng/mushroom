@@ -102,6 +102,16 @@ export function NoteList({
             }}
           >
             <span className="list-title">{row.note.title}</span>
+            {/* Text, not a colour: the state has to survive a greyscale
+                screenshot and a screen reader (steering/ui-retro.md). */}
+            {row.note.aiExcluded ? (
+              <span
+                className="list-tag"
+                title="Not sent to AI (ai: false in this note)"
+              >
+                no AI
+              </span>
+            ) : null}
             {row.note.folder ? (
               <span className="list-folder">{row.note.folder}</span>
             ) : null}

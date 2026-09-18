@@ -309,3 +309,90 @@ fn saving_a_note_claims_its_path_so_the_watcher_ignores_it() {
     ));
     assert!(watcher::is_watchable(&root, &path));
 }
+
+/// An excluded note is kept off the network, not hidden from its owner.
+///
+/// The failure this guards against is over-correcting: deciding that "do not
+/// send this" also means "do not list it, do not index it, do not let it be
+/// edited". That would trade a real benefit for no security at all — the note
+/// is on the user's own disk either way — and it is the kind of thing that
+/// gets added later by someone being careful.
+#[test]
+fn an_excluded_note_is_still_listed_edited_saved_and_searchable() {
+    use mushroom_lib::exclusion::Exclusions;
+    use mushroom_lib::search::service::SearchService;
+
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("notes");
+    cache::bootstrap(&root).unwrap();
+
+    std::fs::create_dir_all(root.join("personal")).unwrap();
+    std::fs::write(
+        root.join("personal/vault.md"),
+        "---\ntitle: Vault\nai: false\ncustom: kept\n---\n# Vault\n\nThe orchestrator credentials.\n",
+    )
+    .unwrap();
+
+    let notes = NotesService::new();
+    notes.set_root(root.clone()).unwrap();
+    notes.rescan().unwrap();
+
+    // Listed, and flagged so the window can say so.
+    let listed = notes.list(None).unwrap();
+    let vault = listed
+        .iter()
+        .find(|n| n.id.as_str() == "personal/vault.md")
+        .expect("an excluded note is still listed");
+    assert!(vault.ai_excluded, "the window needs to know, to show it");
+
+    // Readable.
+    let id = NoteId::new("personal/vault.md");
+    let opened = notes.read(&id).unwrap();
+    assert!(opened.meta.ai_excluded);
+    assert!(opened.body.contains("orchestrator credentials"));
+
+    // Editable and saveable — and the save must not disturb the marker or the
+    // unrelated key beside it.
+    notes
+        .save(
+            &id,
+            "# Vault\n\nThe orchestrator credentials, rotated.\n",
+            Some(opened.disk_modified),
+        )
+        .unwrap();
+
+    let saved = std::fs::read_to_string(root.join("personal/vault.md")).unwrap();
+    assert!(saved.contains("ai: false"), "{saved}");
+    assert!(saved.contains("custom: kept"), "{saved}");
+    assert!(saved.contains("rotated"), "{saved}");
+    assert!(
+        notes.read(&id).unwrap().meta.ai_excluded,
+        "still excluded after a save"
+    );
+
+    // Found by keyword search, which is local and therefore none of the
+    // privacy gate's business.
+    let search = SearchService::new();
+    search.open(&dir.path().join("mushroom.db")).unwrap();
+    search
+        .reconcile(&root, &mushroom_lib::notes::store::scan(&root).notes)
+        .unwrap();
+
+    let hits = search.search("orchestrator", None, None, 20).unwrap();
+    assert!(
+        hits.hits.iter().any(|h| h.id == "personal/vault.md"),
+        "keyword search must still find it"
+    );
+
+    // But not by AI retrieval.
+    let retrieved = search
+        .retrieve_passages("orchestrator", None, 10, 3, Exclusions::default())
+        .unwrap();
+    assert!(
+        !retrieved
+            .passages
+            .iter()
+            .any(|p| p.note_id == "personal/vault.md"),
+        "AI retrieval must not see it"
+    );
+}

@@ -10,6 +10,12 @@ export type NoteMeta = {
   modified: number;
   sizeBytes: number;
   tags: string[];
+  /**
+   * The note carries `ai: false` or `private: true`, so it is never sent to
+   * an AI endpoint. Everything else about it is ordinary: it is listed,
+   * editable, saveable, and found by keyword search.
+   */
+  aiExcluded: boolean;
 };
 
 export type NoteContent = {
