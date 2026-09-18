@@ -156,7 +156,11 @@ impl AiSearchService {
             ],
             temperature: Some(config.temperature),
             max_tokens: None,
-        };
+            sources: Vec::new(),
+        }
+        // Declare what this request is made of, so the gate can check the
+        // exclusions a second time against what actually got assembled.
+        .from_notes(built.citations.iter().map(|c| c.note_id.clone()));
 
         sink(AiDelta::Started {
             model: config.model.clone(),

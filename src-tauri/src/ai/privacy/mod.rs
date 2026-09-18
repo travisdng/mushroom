@@ -123,6 +123,9 @@ impl PrivacyReport {
 pub struct Policy {
     pub mode: PrivacyMode,
     pub rules: Rules,
+    /// The same exclusions retrieval was given. Checked again here, on purpose
+    /// — see [`sanitise`].
+    pub exclusions: Exclusions,
 }
 
 impl Policy {
@@ -130,13 +133,23 @@ impl Policy {
         Self {
             mode,
             rules: Rules::builtin(),
+            exclusions: Exclusions::default(),
         }
     }
 
     /// A policy with a specific rule set, for tests and for a future Settings
     /// screen that can disable individual rules (task 18).
     pub fn with_rules(mode: PrivacyMode, rules: Rules) -> Self {
-        Self { mode, rules }
+        Self {
+            mode,
+            rules,
+            exclusions: Exclusions::default(),
+        }
+    }
+
+    pub fn with_exclusions(mut self, exclusions: Exclusions) -> Self {
+        self.exclusions = exclusions;
+        self
     }
 }
 
@@ -147,6 +160,11 @@ pub enum PrivacyError {
     /// scanner is broken is the one outcome this design must never produce.
     #[error("the credential rules could not be loaded: {detail}")]
     Rules { detail: String },
+
+    /// An excluded note reached the gate, which means something upstream is
+    /// wrong. Refusing is the point: see [`sanitise`].
+    #[error("{note_id} is excluded from AI but reached the request")]
+    ExcludedNote { note_id: String },
 }
 
 /// A request that has been through the gate.
@@ -191,6 +209,28 @@ pub fn sanitise(request: ChatRequest, policy: &Policy) -> Result<SanitisedReques
     // blind because the scanner is broken.
     let _rules = policy.rules.ready()?;
 
+    // Retrieval already filtered these out, so reaching here means a bug
+    // upstream — a new retrieval path that forgot, most likely. Refuse the
+    // whole request rather than trying to edit the excluded text back out of
+    // an assembled prompt: this is a check that should never fire, and a check
+    // that should never fire must be loud when it does. Quietly patching it up
+    // would hide the bug and leave the next path to leak for real.
+    //
+    // Applies in every mode, `Off` included. `Off` turns off the guessing
+    // layer; it is not consent to send a note the user named.
+    for note_id in &request.sources {
+        if policy.exclusions.excludes(note_id) {
+            tracing::error!(
+                target: "ai",
+                note = %note_id,
+                "an excluded note reached the privacy gate; refusing the request"
+            );
+            return Err(PrivacyError::ExcludedNote {
+                note_id: note_id.clone(),
+            });
+        }
+    }
+
     Ok(SanitisedRequest {
         inner: request,
         report: PrivacyReport::clean(policy.mode),
@@ -202,6 +242,7 @@ pub fn sanitise(request: ChatRequest, policy: &Policy) -> Result<SanitisedReques
 mod tests {
     use super::*;
     use crate::ai::provider::Message;
+    use crate::exclusion::ExclusionRule;
 
     fn request() -> ChatRequest {
         ChatRequest {
@@ -209,6 +250,7 @@ mod tests {
             messages: vec![Message::user("what did I write about the GPU nodes?")],
             temperature: None,
             max_tokens: None,
+            sources: Vec::new(),
         }
     }
 
@@ -306,6 +348,55 @@ mod tests {
             !message.contains("GPU nodes"),
             "the request must not appear in the error: {message}"
         );
+    }
+
+    #[test]
+    fn an_excluded_note_reaching_the_gate_stops_the_request() {
+        // Retrieval already filters these out, so this can only fire on a
+        // bug — a new AI path that forgot. Refusing loudly is the point: the
+        // alternative is editing the note back out of an assembled prompt and
+        // hiding the bug until the next path leaks for real.
+        let rules = [ExclusionRule::parse("personal/**")];
+        let policy = Policy::new(PrivacyMode::Redact).with_exclusions(Exclusions::new(&rules));
+
+        let leaked = request().from_notes(["personal/vault.md".to_string()]);
+        let err = sanitise(leaked, &policy).unwrap_err();
+
+        match err {
+            PrivacyError::ExcludedNote { note_id } => {
+                assert_eq!(note_id, "personal/vault.md")
+            }
+            other => panic!("expected an exclusion refusal, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn the_gate_refuses_an_excluded_note_even_with_privacy_off() {
+        // `Off` turns off the guessing layer. It is not consent to send a note
+        // the user named.
+        let rules = [ExclusionRule::parse("personal/**")];
+        let policy = Policy::new(PrivacyMode::Off).with_exclusions(Exclusions::new(&rules));
+        let leaked = request().from_notes(["personal/vault.md".to_string()]);
+        assert!(sanitise(leaked, &policy).is_err());
+    }
+
+    #[test]
+    fn an_ordinary_note_passes_the_gate() {
+        let rules = [ExclusionRule::parse("personal/**")];
+        let policy = Policy::new(PrivacyMode::Redact).with_exclusions(Exclusions::new(&rules));
+        let fine = request().from_notes(["work/gpu-incident.md".to_string()]);
+        assert!(sanitise(fine, &policy).is_ok());
+    }
+
+    #[test]
+    fn declaring_sources_de_duplicates_them() {
+        // Several excerpts commonly come from one note.
+        let req = request().from_notes([
+            "work/a.md".to_string(),
+            "work/a.md".to_string(),
+            "work/b.md".to_string(),
+        ]);
+        assert_eq!(req.sources, vec!["work/a.md", "work/b.md"]);
     }
 
     #[test]

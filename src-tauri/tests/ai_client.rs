@@ -39,6 +39,7 @@ fn request() -> SanitisedRequest {
             messages: vec![Message::user("hello")],
             temperature: Some(0.2),
             max_tokens: Some(64),
+            sources: Vec::new(),
         },
         &Policy::default(),
     )
@@ -890,6 +891,7 @@ async fn a_broken_privacy_gate_sends_nothing_at_all() {
                 messages: vec![Message::user("the password is hunter2")],
                 temperature: None,
                 max_tokens: None,
+                sources: Vec::new(),
             },
             CancellationToken::new(),
         )

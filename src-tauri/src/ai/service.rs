@@ -11,7 +11,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::ai::client::{AiClient, StreamSink};
 use crate::ai::error::AiError;
-use crate::ai::privacy::{self, Policy, PrivacyReport, Rules, SanitisedRequest};
+use crate::ai::privacy::{self, Exclusions, Policy, PrivacyReport, Rules, SanitisedRequest};
 use crate::ai::provider::{ChatRequest, ChatResponse, ConnectionInfo};
 use crate::config::{secrets, AiConfig};
 
@@ -117,7 +117,9 @@ impl AiService {
     /// Read per request rather than cached, so a mode changed in Settings
     /// takes effect on the next question rather than the next launch.
     fn policy(&self) -> Policy {
-        Policy::with_rules(self.config().privacy_mode, self.rules.clone())
+        let config = self.config();
+        Policy::with_rules(config.privacy_mode, self.rules.clone())
+            .with_exclusions(Exclusions::new(&config.ai_exclusions))
     }
 
     /// A one-shot completion, with the usage line written for it.

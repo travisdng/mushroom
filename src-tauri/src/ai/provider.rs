@@ -70,6 +70,24 @@ pub struct ChatRequest {
     pub messages: Vec<Message>,
     pub temperature: Option<f32>,
     pub max_tokens: Option<u32>,
+    /// Ids of the notes whose content went into these messages.
+    ///
+    /// Provenance travels with the request so the privacy gate can check it
+    /// without every caller growing an extra argument — and so that spec 10's
+    /// tool results, which are also note content, have somewhere obvious to
+    /// declare themselves. Empty means "no note content", which is true of a
+    /// plain conversation and of `Test Connection`.
+    pub sources: Vec<String>,
+}
+
+impl ChatRequest {
+    /// Declare which notes contributed to this request.
+    pub fn from_notes(mut self, ids: impl IntoIterator<Item = String>) -> Self {
+        self.sources = ids.into_iter().collect();
+        self.sources.sort();
+        self.sources.dedup();
+        self
+    }
 }
 
 /// Token counts. Serialised camelCase for the UI, but the wire format is

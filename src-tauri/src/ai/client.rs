@@ -425,5 +425,7 @@ pub fn request_from(
         messages,
         temperature: Some(config.temperature),
         max_tokens,
+        // Callers that send note content declare it with `from_notes`.
+        sources: Vec::new(),
     }
 }
