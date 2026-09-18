@@ -19,6 +19,14 @@ pub struct Frontmatter {
     pub created: Option<String>,
     pub updated: Option<String>,
     pub tags: Vec<String>,
+    /// The user has marked this note as never to be sent to an AI endpoint,
+    /// with `ai: false` or `private: true` (spec 08 R2.1).
+    ///
+    /// Read but never written: `render` does not own these keys, so they
+    /// survive a save byte-for-byte like any other key Mushroom does not
+    /// understand. Mushroom does not edit the user's text to protect them
+    /// from it.
+    pub ai_excluded: bool,
 }
 
 /// A note split into its frontmatter and its body.
@@ -112,11 +120,41 @@ fn parse_block(raw: &str) -> Frontmatter {
             "created" => fm.created = Some(unquote(value)).filter(|v| !v.is_empty()),
             "updated" => fm.updated = Some(unquote(value)).filter(|v| !v.is_empty()),
             "tags" => fm.tags = parse_inline_list(value),
+            // `ai: false` and `private: true` both mean "never send this".
+            // Two spellings because both are the obvious one to somebody, and
+            // a privacy control that only works if you guessed the right word
+            // is not a privacy control.
+            "ai" => {
+                if is_false(value) {
+                    fm.ai_excluded = true;
+                }
+            }
+            "private" => {
+                if is_true(value) {
+                    fm.ai_excluded = true;
+                }
+            }
             _ => {}
         }
     }
 
     fm
+}
+
+/// YAML's falsey spellings. `ai: false`, `ai: no`, `ai: off`, `ai: 0`.
+fn is_false(value: &str) -> bool {
+    matches!(
+        unquote(value).trim().to_ascii_lowercase().as_str(),
+        "false" | "no" | "off" | "0"
+    )
+}
+
+/// YAML's truthy spellings, for `private:`.
+fn is_true(value: &str) -> bool {
+    matches!(
+        unquote(value).trim().to_ascii_lowercase().as_str(),
+        "true" | "yes" | "on" | "1"
+    )
 }
 
 fn unquote(value: &str) -> String {
@@ -391,5 +429,79 @@ mod tests {
         let content = "\u{feff}---\ntitle: BOM\n---\nBody\n";
         let s = split(content);
         assert_eq!(s.frontmatter.title.as_deref(), Some("BOM"));
+    }
+}
+
+#[cfg(test)]
+mod exclusion_tests {
+    use super::*;
+
+    fn excluded(front: &str) -> bool {
+        split(&format!("---\n{front}\n---\nbody\n"))
+            .frontmatter
+            .ai_excluded
+    }
+
+    #[test]
+    fn ai_false_excludes_the_note() {
+        assert!(excluded("ai: false"));
+        assert!(excluded("ai: no"));
+        assert!(excluded("ai: off"));
+        assert!(excluded("ai: 0"));
+        assert!(excluded("ai: FALSE"));
+        assert!(excluded("ai: \"false\""));
+    }
+
+    #[test]
+    fn private_true_excludes_the_note() {
+        assert!(excluded("private: true"));
+        assert!(excluded("private: yes"));
+        assert!(excluded("private: on"));
+        assert!(excluded("private: 1"));
+    }
+
+    #[test]
+    fn the_opposite_values_do_not_exclude() {
+        // Getting this backwards would be the worst kind of bug here: a note
+        // the user deliberately opted *in* would stop reaching the AI, and
+        // they would conclude the feature is broken rather than that they are
+        // protected.
+        assert!(!excluded("ai: true"));
+        assert!(!excluded("private: false"));
+        assert!(!excluded("title: Ordinary note"));
+        assert!(!excluded("tags: [work]"));
+    }
+
+    #[test]
+    fn an_indented_key_is_not_a_top_level_one() {
+        // `ai: false` nested inside someone else's structure means something
+        // to them, not to us.
+        let split = split("---\nplugin:\n  ai: false\n---\nbody\n");
+        assert!(!split.frontmatter.ai_excluded);
+    }
+
+    #[test]
+    fn a_note_with_no_frontmatter_is_not_excluded() {
+        assert!(!split("# Just a heading\n").frontmatter.ai_excluded);
+    }
+
+    #[test]
+    fn saving_an_excluded_note_leaves_its_frontmatter_alone() {
+        // The whole mechanism depends on this. If `render` ever started
+        // owning `ai:`, a save would rewrite or drop the user's own marker
+        // and the note would silently start being sent again.
+        let original =
+            "---\ntitle: Vault\nai: false\nprivate: true\ncustom: kept\n---\n# Vault\n\nbody\n";
+        let parsed = split(original);
+        assert!(parsed.frontmatter.ai_excluded);
+
+        let rendered = render(&parsed.frontmatter, &parsed.body);
+        assert!(rendered.contains("ai: false"), "{rendered}");
+        assert!(rendered.contains("private: true"), "{rendered}");
+        assert!(rendered.contains("custom: kept"), "{rendered}");
+
+        // And round-tripping keeps it excluded.
+        assert!(split(&rendered).frontmatter.ai_excluded);
+        assert!(!rendered.is_empty());
     }
 }

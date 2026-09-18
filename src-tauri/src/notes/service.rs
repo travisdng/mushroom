@@ -191,6 +191,9 @@ impl NotesService {
             created: Some(now.clone()),
             updated: Some(now),
             tags: vec![],
+            // A new note is not excluded. Exclusion is something the user
+            // writes, and Mushroom never writes it for them.
+            ai_excluded: false,
         };
         let content = frontmatter::render(&fm, "");
         store::atomic_write(&path, &content)?;
