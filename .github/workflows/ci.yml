@@ -13,6 +13,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Gitleaks doing the job it was built for: stopping a credential being
+  # committed to Mushroom's own source. Unrelated to the privacy gate inside
+  # the app (spec 08), which scans what is *sent* rather than what is stored.
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The scan walks the whole history, so the default depth-1 checkout
+          # would silently check one commit and report success.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      # Installed from source at a pinned version rather than through the
+      # official action, which wants a licence key for organization-owned
+      # repositories. The module path is still the original author's.
+      #
+      # Pinned deliberately: an upstream rule change must not be able to turn
+      # this job red without somebody deciding to take it.
+      - run: go install github.com/zricethezav/gitleaks/v8@v8.30.1
+
+      # --redact so a finding does not print the secret into the CI log, where
+      # it would be more exposed than it was in the commit.
+      - run: gitleaks git --redact --verbose
+
   check:
     name: Typecheck, build, lint, test
     runs-on: windows-latest
