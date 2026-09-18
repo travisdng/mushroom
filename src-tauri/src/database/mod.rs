@@ -190,12 +190,15 @@ mod tests {
 
         let db = Db::open(&path).unwrap();
         let version = db.with("version", migrations::current_version).unwrap();
-        assert_eq!(version, 1);
+        assert_eq!(version, migrations::latest_version());
         drop(db);
 
         // Re-opening must not re-apply anything.
         let db = Db::open(&path).unwrap();
-        assert_eq!(db.with("version", migrations::current_version).unwrap(), 1);
+        assert_eq!(
+            db.with("version", migrations::current_version).unwrap(),
+            migrations::latest_version()
+        );
 
         for table in [
             "notes",
@@ -225,7 +228,10 @@ mod tests {
 
         // Opening must succeed by starting over, not fail.
         let db = Db::open(&path).unwrap();
-        assert_eq!(db.with("version", migrations::current_version).unwrap(), 1);
+        assert_eq!(
+            db.with("version", migrations::current_version).unwrap(),
+            migrations::latest_version()
+        );
 
         let quarantined: Vec<_> = std::fs::read_dir(dir.path())
             .unwrap()

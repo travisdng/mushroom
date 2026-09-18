@@ -11,6 +11,7 @@ use serde::Serialize;
 
 use crate::database::Db;
 use crate::error::AppError;
+use crate::exclusion::Exclusions;
 use crate::search::query;
 
 /// Why a passage was returned. Only `Keyword` is possible today; the field
@@ -52,6 +53,13 @@ pub struct RetrievalQuery {
     pub per_note_cap: usize,
     pub folder: Option<String>,
     pub modified_after: Option<i64>,
+    /// Notes the user has told Mushroom never to send to an AI endpoint.
+    ///
+    /// Only the AI paths set this. Keyword search deliberately leaves it
+    /// empty: an excluded note is still the user's note and must still be
+    /// findable on their own machine (spec 08 R2.4). The risk being managed
+    /// is the network, not the disk.
+    pub excluded: Option<Exclusions>,
 }
 
 impl RetrievalQuery {
@@ -63,12 +71,55 @@ impl RetrievalQuery {
             per_note_cap: 3,
             folder: None,
             modified_after: None,
+            excluded: None,
         }
     }
 }
 
+/// What a retrieval produced, and what it deliberately left out.
+///
+/// Retrieval has two outputs now: the passages, and how many distinct notes
+/// matched but were withheld because the user excluded them. The second is not
+/// a detail — an answer built from less than the user expects looks like a bad
+/// answer unless it says so (spec 08 R2.6).
+///
+/// Derefs to the passage slice so callers that only want the hits read exactly
+/// as they did before.
+#[derive(Debug, Clone, Default)]
+pub struct RetrievalResult {
+    pub passages: Vec<RetrievedPassage>,
+    /// Distinct notes, not passages: one note can contribute several.
+    pub excluded_notes: usize,
+}
+
+impl std::ops::Deref for RetrievalResult {
+    type Target = [RetrievedPassage];
+
+    fn deref(&self) -> &Self::Target {
+        &self.passages
+    }
+}
+
+impl IntoIterator for RetrievalResult {
+    type Item = RetrievedPassage;
+    type IntoIter = std::vec::IntoIter<RetrievedPassage>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.passages.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a RetrievalResult {
+    type Item = &'a RetrievedPassage;
+    type IntoIter = std::slice::Iter<'a, RetrievedPassage>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.passages.iter()
+    }
+}
+
 pub trait Retriever: Send + Sync {
-    fn retrieve(&self, q: &RetrievalQuery) -> Result<Vec<RetrievedPassage>, AppError>;
+    fn retrieve(&self, q: &RetrievalQuery) -> Result<RetrievalResult, AppError>;
 }
 
 /// FTS5 over the passage index.
@@ -83,10 +134,10 @@ impl<'a> FtsRetriever<'a> {
 }
 
 impl Retriever for FtsRetriever<'_> {
-    fn retrieve(&self, q: &RetrievalQuery) -> Result<Vec<RetrievedPassage>, AppError> {
+    fn retrieve(&self, q: &RetrievalQuery) -> Result<RetrievalResult, AppError> {
         let parsed = query::parse_with(&q.text, q.match_mode);
         if parsed.is_empty() {
-            return Ok(Vec::new());
+            return Ok(RetrievalResult::default());
         }
 
         // Ask for more than we need: the per-note cap thins the results
@@ -96,6 +147,7 @@ impl Retriever for FtsRetriever<'_> {
         let expression = parsed.expression.clone();
         let folder = q.folder.clone();
         let modified_after = q.modified_after;
+        let apply_ai_exclusion = q.excluded.is_some();
 
         let mut rows = self.db.with("searching passages", move |conn| {
             let mut stmt = conn.prepare(
@@ -108,6 +160,7 @@ impl Retriever for FtsRetriever<'_> {
                  WHERE passages_fts MATCH ?1
                    AND (?2 IS NULL OR n.folder = ?2 OR n.folder LIKE ?3)
                    AND (?4 IS NULL OR n.modified_at >= ?4)
+                   AND (?6 = 0 OR n.ai_excluded = 0)
                  ORDER BY rank
                  LIMIT ?5",
             )?;
@@ -120,7 +173,10 @@ impl Retriever for FtsRetriever<'_> {
                         folder.clone(),
                         like.clone(),
                         modified_after,
-                        fetch as i64
+                        fetch as i64,
+                        // Only the AI paths pass exclusions; keyword search
+                        // leaves them off and still finds excluded notes.
+                        apply_ai_exclusion as i64
                     ],
                     |row| {
                         Ok((
@@ -155,13 +211,21 @@ impl Retriever for FtsRetriever<'_> {
                  WHERE notes_fts MATCH ?1
                    AND (?2 IS NULL OR n.folder = ?2 OR n.folder LIKE ?3)
                    AND (?4 IS NULL OR n.modified_at >= ?4)
+                   AND (?6 = 0 OR n.ai_excluded = 0)
                  ORDER BY rank
                  LIMIT ?5",
             )?;
 
             let titles = by_title
                 .query_map(
-                    params![expression, folder, like, modified_after, fetch as i64],
+                    params![
+                        expression,
+                        folder,
+                        like,
+                        modified_after,
+                        fetch as i64,
+                        apply_ai_exclusion as i64
+                    ],
                     |row| {
                         Ok((
                             row.get::<_, String>(0)?,
@@ -196,11 +260,24 @@ impl Retriever for FtsRetriever<'_> {
 
         let mut per_note: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
+        // Distinct notes dropped, not passages: "2 notes were excluded" is
+        // what the panel says, and one note can contribute several passages.
+        let mut dropped_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
         let mut out = Vec::new();
 
         rows.sort_by(|a, b| a.7.partial_cmp(&b.7).unwrap_or(std::cmp::Ordering::Equal));
 
         for (path, title, folder, heading_path, line_start, line_end, text, rank) in rows {
+            // Before the cap and the limit, so an excluded note does not eat a
+            // result slot. The retriever already over-fetches for the per-note
+            // cap, which is the headroom this borrows.
+            if let Some(excluded) = &q.excluded {
+                if excluded.excludes(&path) {
+                    dropped_ids.insert(path);
+                    continue;
+                }
+            }
+
             let seen = per_note.entry(path.clone()).or_insert(0);
             if *seen >= q.per_note_cap {
                 continue;
@@ -230,7 +307,10 @@ impl Retriever for FtsRetriever<'_> {
             }
         }
 
-        Ok(out)
+        Ok(RetrievalResult {
+            passages: out,
+            excluded_notes: dropped_ids.len(),
+        })
     }
 }
 
@@ -250,7 +330,7 @@ impl<R: Retriever> LoggingRetriever<R> {
 }
 
 impl<R: Retriever> Retriever for LoggingRetriever<R> {
-    fn retrieve(&self, q: &RetrievalQuery) -> Result<Vec<RetrievedPassage>, AppError> {
+    fn retrieve(&self, q: &RetrievalQuery) -> Result<RetrievalResult, AppError> {
         let started = std::time::Instant::now();
         let result = self.inner.retrieve(q);
         match &result {
@@ -258,7 +338,8 @@ impl<R: Retriever> Retriever for LoggingRetriever<R> {
             // name. Counts and timings are enough to diagnose slowness.
             Ok(hits) => tracing::debug!(
                 target: "search",
-                hits = hits.len(),
+                hits = hits.passages.len(),
+                excluded_notes = hits.excluded_notes,
                 ms = started.elapsed().as_millis() as u64,
                 "retrieval finished"
             ),
@@ -480,5 +561,140 @@ Something entirely unrelated to the title is written here.
 
         assert_eq!(direct, decorated);
         assert!(direct > 0);
+    }
+}
+
+#[cfg(test)]
+mod exclusion_tests {
+    use super::*;
+    use crate::exclusion::ExclusionRule;
+    use crate::notes::cache;
+    use crate::notes::model::NoteId;
+    use crate::search::indexer;
+
+    /// Two notes about the same subject: one ordinary, one the user has
+    /// excluded in its frontmatter.
+    fn corpus() -> (Db, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("notes");
+        cache::bootstrap(&root).unwrap();
+        let db = Db::open_in_memory().unwrap();
+
+        for (rel, body) in [
+            (
+                "work/gpu-infra.md",
+                "# GPU Infrastructure\n\nGPU nodes drain on a schedule.\n",
+            ),
+            (
+                "personal/gpu-vault.md",
+                "---\ntitle: GPU Vault\nai: false\n---\n# GPU Vault\n\nGPU credentials for the drain schedule.\n",
+            ),
+            (
+                "personal/gpu-diary.md",
+                "# GPU diary\n\nGPU drain notes I keep to myself.\n",
+            ),
+        ] {
+            let path = root.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, body).unwrap();
+            indexer::index_note(&db, &root, &NoteId::new(rel)).unwrap();
+        }
+
+        (db, dir)
+    }
+
+    fn query(excluded: Option<Exclusions>) -> RetrievalQuery {
+        let mut q = RetrievalQuery::new("gpu");
+        q.match_mode = query::Match::Any;
+        q.excluded = excluded;
+        q
+    }
+
+    fn paths(result: &RetrievalResult) -> Vec<String> {
+        result.passages.iter().map(|p| p.note_id.clone()).collect()
+    }
+
+    #[test]
+    fn keyword_search_still_finds_an_excluded_note() {
+        // The risk being managed is the network, not the disk. A note the user
+        // keeps out of the AI is still their note and must still be findable
+        // on their own machine (R2.4).
+        let (db, _dir) = corpus();
+        let hits = FtsRetriever::new(&db).retrieve(&query(None)).unwrap();
+        assert!(
+            paths(&hits).iter().any(|p| p == "personal/gpu-vault.md"),
+            "got {:?}",
+            paths(&hits)
+        );
+        assert_eq!(hits.excluded_notes, 0);
+    }
+
+    #[test]
+    fn an_ai_retrieval_drops_a_note_excluded_in_its_frontmatter() {
+        let (db, _dir) = corpus();
+        let hits = FtsRetriever::new(&db)
+            .retrieve(&query(Some(Exclusions::default())))
+            .unwrap();
+        assert!(
+            !paths(&hits).iter().any(|p| p == "personal/gpu-vault.md"),
+            "got {:?}",
+            paths(&hits)
+        );
+        assert!(paths(&hits).iter().any(|p| p == "work/gpu-infra.md"));
+    }
+
+    #[test]
+    fn a_folder_rule_drops_notes_and_is_counted() {
+        let (db, _dir) = corpus();
+        let rules = [ExclusionRule::parse("personal/**")];
+        let hits = FtsRetriever::new(&db)
+            .retrieve(&query(Some(Exclusions::new(&rules))))
+            .unwrap();
+
+        assert!(
+            paths(&hits).iter().all(|p| p.starts_with("work/")),
+            "got {:?}",
+            paths(&hits)
+        );
+        // The vault note is dropped by the SQL filter before the Rust one ever
+        // sees it, so only the diary is counted here. The number exists to
+        // tell the user their answer was built from less than they expect; it
+        // is not an audit of which mechanism caught what.
+        assert_eq!(hits.excluded_notes, 1);
+    }
+
+    #[test]
+    fn the_title_query_honours_exclusion_too() {
+        // The retriever runs a second query against note titles, and the
+        // first version of this filtered only the passage query — so a note
+        // whose *title* matched sailed straight through. The end-to-end leak
+        // harness caught it; this pins it at the level it broke.
+        let (db, _dir) = corpus();
+        let mut q = RetrievalQuery::new("vault");
+        q.match_mode = query::Match::Any;
+        q.excluded = Some(Exclusions::default());
+
+        let hits = FtsRetriever::new(&db).retrieve(&q).unwrap();
+        assert!(
+            !paths(&hits).iter().any(|p| p == "personal/gpu-vault.md"),
+            "a title match bypassed exclusion: {:?}",
+            paths(&hits)
+        );
+    }
+
+    #[test]
+    fn excluded_notes_do_not_eat_result_slots() {
+        // Filtering after LIMIT would silently shrink the answer: the user
+        // would get fewer passages and no explanation.
+        let (db, _dir) = corpus();
+        let mut q = query(Some(Exclusions::new(&[ExclusionRule::parse("personal")])));
+        q.limit = 2;
+
+        let hits = FtsRetriever::new(&db).retrieve(&q).unwrap();
+        assert!(
+            !hits.passages.is_empty(),
+            "the surviving note should still fill a slot"
+        );
+        assert!(paths(&hits).iter().all(|p| p.starts_with("work/")));
     }
 }

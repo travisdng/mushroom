@@ -223,8 +223,6 @@ async fn planted_credentials_never_reach_the_endpoint() {
     assert_nothing_leaked(&bodies);
 }
 
-// Ignored until exclusion is enforced in tasks 6-9. Also fails today.
-#[ignore = "fails until exclusion is enforced (tasks 6-9)"]
 #[tokio::test]
 async fn an_excluded_note_is_never_sent_in_any_mode() {
     use mushroom_lib::ai::privacy::PrivacyMode;

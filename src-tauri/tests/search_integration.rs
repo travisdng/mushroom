@@ -291,3 +291,75 @@ fn scales_to_five_thousand_notes() {
         "startup reconciliation took {reconcile_time:?}, budget is 2s"
     );
 }
+
+/// Upgrading from a v1 index must not send an already-excluded note.
+///
+/// Migration 0002 adds `ai_excluded`, defaulting to 0 — "safe to send", the
+/// unsafe direction. A note already carrying `ai: false` would therefore be
+/// sent exactly once, on the first launch after upgrading, which is the launch
+/// where the user has most reason to think they are protected.
+///
+/// The migration prevents that by marking every row as needing a re-index
+/// (`size_bytes = -1`, which no real file can be). This asserts the mechanism
+/// that depends on: reconcile sees the sentinel, reads the note again, and the
+/// exclusion comes back.
+#[test]
+fn a_note_excluded_before_the_upgrade_is_re_excluded_by_the_next_reconcile() {
+    use mushroom_lib::exclusion::Exclusions;
+
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("notes");
+    let db_path = dir.path().join("mushroom.db");
+    cache::bootstrap(&root).unwrap();
+
+    std::fs::create_dir_all(root.join("personal")).unwrap();
+    std::fs::write(
+        root.join("personal/vault.md"),
+        "---\ntitle: Vault\nai: false\n---\n# Vault\n\nThe GPU orchestrator credentials.\n",
+    )
+    .unwrap();
+
+    let svc = SearchService::new();
+    svc.open(&db_path).unwrap();
+    svc.reconcile(&root, &store::scan(&root).notes).unwrap();
+
+    // Put the index into the state migration 0002 leaves behind: the column
+    // exists and defaults to 0, and the row is marked as needing a re-index.
+    svc.database_path().unwrap();
+    let conn = rusqlite::Connection::open(&db_path).unwrap();
+    conn.execute("UPDATE notes SET ai_excluded = 0, size_bytes = -1", [])
+        .unwrap();
+    drop(conn);
+
+    // Before reconcile the note is visible to AI retrieval — this is the
+    // window the migration exists to close, and asserting it proves the test
+    // would catch a regression rather than passing for free.
+    let leaked = svc
+        .retrieve_passages("gpu orchestrator", None, 10, 3, Exclusions::default())
+        .unwrap();
+    assert!(
+        leaked
+            .passages
+            .iter()
+            .any(|p| p.note_id == "personal/vault.md"),
+        "precondition: the stale row should still look sendable"
+    );
+
+    svc.reconcile(&root, &store::scan(&root).notes).unwrap();
+
+    let after = svc
+        .retrieve_passages("gpu orchestrator", None, 10, 3, Exclusions::default())
+        .unwrap();
+    assert!(
+        !after
+            .passages
+            .iter()
+            .any(|p| p.note_id == "personal/vault.md"),
+        "the re-index should have restored the exclusion, got {:?}",
+        after
+            .passages
+            .iter()
+            .map(|p| &p.note_id)
+            .collect::<Vec<_>>()
+    );
+}

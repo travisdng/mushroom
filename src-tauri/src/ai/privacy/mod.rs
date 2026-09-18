@@ -20,12 +20,11 @@
 //! `.kiro/steering/ai-integration.md`, and it matters: exclusion is complete,
 //! detection is best-effort, and no screen may claim Mushroom removes secrets.
 
-pub mod exclude;
 pub mod rules;
 
 use serde::{Deserialize, Serialize};
 
-pub use exclude::{ExclusionRule, Exclusions};
+pub use crate::exclusion::{ExclusionRule, Exclusions};
 pub use rules::{RuleSet, Rules};
 
 use crate::ai::provider::ChatRequest;

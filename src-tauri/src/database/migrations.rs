@@ -8,7 +8,18 @@ use rusqlite::Connection;
 use crate::error::AppError;
 
 /// Every migration, in order. Append only — never edit a shipped one.
-const MIGRATIONS: &[(u32, &str)] = &[(1, include_str!("../../migrations/0001_init.sql"))];
+const MIGRATIONS: &[(u32, &str)] = &[
+    (1, include_str!("../../migrations/0001_init.sql")),
+    (2, include_str!("../../migrations/0002_ai_exclusion.sql")),
+];
+
+/// The version a fully-migrated database ends up at.
+///
+/// Exposed so tests can assert "migrated to the latest" rather than hard-coding
+/// a number that every new migration then has to remember to update.
+pub fn latest_version() -> u32 {
+    MIGRATIONS.last().map(|(v, _)| *v).unwrap_or(0)
+}
 
 pub fn current_version(conn: &Connection) -> rusqlite::Result<u32> {
     conn.query_row("PRAGMA user_version", [], |row| row.get(0))

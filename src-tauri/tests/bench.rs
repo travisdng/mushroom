@@ -196,3 +196,72 @@ fn warm_reconcile() {
     }
     report("cold scan of the notes folder", samples);
 }
+
+/// Spec 08 R7.3 — the exclusion filter must not move the retrieval budget.
+///
+/// Retrieval for a question has 200 ms to work with (spec 05 R2.7). This
+/// milestone adds two filters to that path: a SQL predicate on an indexed
+/// column, and a glob match per candidate row in Rust. Both are cheap in
+/// theory. "Cheap in theory" is not a measurement, so this measures the same
+/// retrieval three ways and prints all three.
+#[test]
+#[ignore = "measurement; needs MUSHROOM_BENCH_NOTES"]
+fn retrieval_exclusion_cost() {
+    use mushroom_lib::exclusion::{ExclusionRule, Exclusions};
+
+    let root = bench_root!();
+    let dir = tempfile::tempdir().unwrap();
+    let svc = SearchService::new();
+    svc.open(&dir.path().join("mushroom.db")).unwrap();
+
+    let scan = store::scan(&root);
+    println!("corpus: {} notes", scan.notes.len());
+    svc.reconcile(&root, &scan.notes).unwrap();
+
+    const QUERIES: [&str; 4] = ["capacity", "drain window", "GPU node pool drain", "mireshi"];
+
+    // Ten rules, which is more than anyone will actually configure, because a
+    // measurement taken at a comfortable size proves nothing about the size
+    // that hurts.
+    let rules: Vec<ExclusionRule> = [
+        "personal/**",
+        "personal/finance/**",
+        "**/secrets.md",
+        "work/cred*",
+        "archive/2019/**",
+        "archive/2020/**",
+        "scratch",
+        "**/*-private.md",
+        "vault",
+        "notes/keys/**",
+    ]
+    .iter()
+    .map(|p| ExclusionRule::parse(p))
+    .collect();
+
+    let cases: [(&str, Option<Exclusions>); 3] = [
+        ("no exclusion (keyword search)", None),
+        ("frontmatter only (no rules)", Some(Exclusions::default())),
+        ("frontmatter + 10 glob rules", Some(Exclusions::new(&rules))),
+    ];
+
+    for (label, excluded) in cases {
+        // Warm the cache before timing, as `search_latency` does.
+        for q in QUERIES {
+            let _ = svc.retrieve_passages(q, None, 12, 3, excluded.clone().unwrap_or_default());
+        }
+
+        let mut samples = Vec::new();
+        for _ in 0..20 {
+            for q in QUERIES {
+                let started = Instant::now();
+                let found = svc
+                    .retrieve_passages(q, None, 12, 3, excluded.clone().unwrap_or_default())
+                    .unwrap();
+                samples.push(started.elapsed().as_micros());
+                std::hint::black_box(found.passages.len());
+            }
+        }
+        report(&format!("retrieve_passages \u{2014} {label}"), samples);
+    }
+}

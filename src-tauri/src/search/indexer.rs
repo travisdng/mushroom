@@ -68,6 +68,10 @@ pub fn index_note(db: &Db, root: &Path, id: &NoteId) -> Result<(), AppError> {
     let folder = id.folder().to_string();
     let size = fs_meta.len() as i64;
     let indexed_at = now_unix();
+    // `ai: false` / `private: true`. Stored so the AI retriever can filter in
+    // SQL, before LIMIT, rather than dropping rows afterwards and quietly
+    // shrinking the result set (spec 08 R2.3).
+    let ai_excluded = split.frontmatter.ai_excluded;
 
     db.transaction("indexing a note", |tx| {
         // Replace rather than update: the passage set changes shape on every
@@ -87,8 +91,9 @@ pub fn index_note(db: &Db, root: &Path, id: &NoteId) -> Result<(), AppError> {
 
         tx.execute(
             "INSERT INTO notes
-               (path, title, folder, created_at, modified_at, size_bytes, content_hash, indexed_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+               (path, title, folder, created_at, modified_at, size_bytes, content_hash,
+                indexed_at, ai_excluded)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 id_str,
                 title,
@@ -97,7 +102,10 @@ pub fn index_note(db: &Db, root: &Path, id: &NoteId) -> Result<(), AppError> {
                 modified,
                 size,
                 hash,
-                indexed_at
+                indexed_at,
+                // From the note's own frontmatter, so a rebuilt index
+                // reproduces it and the retriever can filter in SQL.
+                ai_excluded as i64
             ],
         )?;
         let note_row = tx.last_insert_rowid();

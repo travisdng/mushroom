@@ -43,6 +43,15 @@ pub struct AiConfig {
     /// upgrade must never quietly turn the gate off (spec 08 R4.5).
     pub privacy_mode: crate::ai::privacy::PrivacyMode,
 
+    /// Folders and globs the user has excluded from every AI path.
+    ///
+    /// Frontmatter exclusion (`ai: false`) is per note and lives in the note;
+    /// this is the settings half, for whole folders. Stored with any parse
+    /// problem attached so Settings can show a broken rule as broken rather
+    /// than silently doing nothing with it.
+    #[serde(default)]
+    pub ai_exclusions: Vec<crate::exclusion::ExclusionRule>,
+
     /// Whether the user has ever applied AI settings.
     ///
     /// Not derivable from the other fields: `base_url` and `model` always hold
@@ -66,6 +75,7 @@ impl Default for AiConfig {
             log_prompts: false,
             stream: true,
             privacy_mode: crate::ai::privacy::PrivacyMode::Redact,
+            ai_exclusions: Vec::new(),
             configured: false,
         }
     }

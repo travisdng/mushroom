@@ -16,6 +16,7 @@ use crate::ai::error::AiError;
 use crate::ai::provider::{ChatRequest, Message, Usage};
 use crate::ai::question::{self, SearchTerms};
 use crate::ai::service::AiService;
+use crate::exclusion::Exclusions;
 use crate::search::retriever::RetrievedPassage;
 use crate::search::service::SearchService;
 
@@ -322,9 +323,14 @@ impl AiSearchService {
     ) -> Result<Retrieved, AiError> {
         let search = self.search.clone();
         let query = terms.query.clone();
+        // Built from settings on every question rather than cached, so a rule
+        // added in Settings takes effect on the next question. A privacy
+        // control that needs a restart is one people will believe is on when
+        // it is not.
+        let excluded = Exclusions::new(&self.ai.config().ai_exclusions);
 
         let found = tokio::task::spawn_blocking(move || {
-            search.retrieve_passages(&query, folder, PASSAGE_LIMIT, PER_NOTE_CAP)
+            search.retrieve_passages(&query, folder, PASSAGE_LIMIT, PER_NOTE_CAP, excluded)
         })
         .await
         .map_err(|e| AiError::BadResponse {

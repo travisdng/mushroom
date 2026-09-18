@@ -13,6 +13,7 @@ use serde::Serialize;
 
 use crate::database::Db;
 use crate::error::AppError;
+use crate::exclusion::Exclusions;
 use crate::notes::model::{NoteId, NoteMeta};
 use crate::search::indexer::{self, REBUILD_BATCH};
 use crate::search::query;
@@ -73,6 +74,9 @@ pub struct QuestionContext {
     /// The terms actually searched, for the "searched for: …" line (R2.5).
     pub terms: Vec<String>,
     pub stale: bool,
+    /// Notes that matched but were withheld because the user excluded them
+    /// from AI (spec 08 R2.6). Counted, named nowhere it could be sent.
+    pub excluded_notes: usize,
 }
 
 pub struct SearchService {
@@ -341,12 +345,17 @@ impl SearchService {
     /// The same retriever `search` uses, with different limits: several
     /// passages per note rather than one, because the model is being given
     /// context to read, not a list to scan.
+    /// `excluded` is what the user told Mushroom never to send. Passing it is
+    /// what turns on AI exclusion — both the indexed frontmatter flag and the
+    /// folder rules — so a caller that is *not* feeding an AI endpoint simply
+    /// does not pass it and still sees every note (spec 08 R2.4).
     pub fn retrieve_passages(
         &self,
         text: &str,
         folder: Option<String>,
         limit: usize,
         per_note_cap: usize,
+        excluded: Exclusions,
     ) -> Result<QuestionContext, AppError> {
         let parsed = query::parse_any(text);
         if parsed.is_empty() {
@@ -355,6 +364,7 @@ impl SearchService {
                 modified: HashMap::new(),
                 terms: parsed.terms,
                 stale: self.is_stale(),
+                excluded_notes: 0,
             });
         }
 
@@ -363,15 +373,25 @@ impl SearchService {
         request.per_note_cap = per_note_cap;
         request.limit = limit;
         request.folder = folder;
+        request.excluded = Some(excluded);
 
-        let passages = self.with_db(|db| {
+        let found = self.with_db(|db| {
             let retriever = LoggingRetriever::new(FtsRetriever::new(db));
             retriever.retrieve(&request)
         })?;
 
+        if found.excluded_notes > 0 {
+            tracing::info!(
+                target: "ai",
+                notes = found.excluded_notes,
+                "notes withheld from retrieval by the user's exclusions"
+            );
+        }
+
         Ok(QuestionContext {
             modified: self.note_modified_times()?,
-            passages,
+            excluded_notes: found.excluded_notes,
+            passages: found.passages,
             terms: parsed.terms,
             stale: self.is_stale(),
         })

@@ -9,6 +9,7 @@ pub mod config;
 pub mod database;
 pub mod diagnostics;
 mod error;
+pub mod exclusion;
 pub mod logging;
 pub mod notes;
 pub mod panics;
