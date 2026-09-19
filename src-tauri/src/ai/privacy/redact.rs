@@ -120,7 +120,10 @@ mod tests {
         // The whole point: the model must still understand that the batch
         // runner authenticates with *something*.
         let out = redact(
-            "The batch runner authenticated with AK1AQYRZ5TMK7VW3XJ42 last week.",
+            concat!(
+                "The batch runner authenticated with AKIA",
+                "QYRZ5TMK7VW3XJ42 last week."
+            ),
             &rules(),
         )
         .unwrap();
@@ -129,7 +132,7 @@ mod tests {
             out.text,
             "The batch runner authenticated with [redacted: aws-access-key] last week."
         );
-        assert!(!out.text.contains("AK1AQYRZ5TMK7VW3XJ42"));
+        assert!(!out.text.contains(concat!("AKIA", "QYRZ5TMK7VW3XJ42")));
         assert_eq!(out.redactions.len(), 1);
         assert_eq!(out.redactions[0].count, 1);
     }
@@ -145,7 +148,11 @@ mod tests {
     #[test]
     fn several_secrets_of_the_same_kind_are_counted_once_with_a_tally() {
         let out = redact(
-            "keys AK1AQYRZ5TMK7VW3XJ42 and AK1A2345TMK7VW3XJ42Q rotated",
+            concat!(
+                "keys AKIA",
+                "QYRZ5TMK7VW3XJ42 and AKIA",
+                "2345TMK7VW3XJ42Q rotated"
+            ),
             &rules(),
         )
         .unwrap();
@@ -157,7 +164,11 @@ mod tests {
     #[test]
     fn different_kinds_are_reported_separately() {
         let out = redact(
-            "AK1AQYRZ5TMK7VW3XJ42 and ghx_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf",
+            concat!(
+                "AKIA",
+                "QYRZ5TMK7VW3XJ42 and ghp",
+                "_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf"
+            ),
             &rules(),
         )
         .unwrap();
@@ -173,7 +184,7 @@ mod tests {
             Rule::with_keywords("outer", r"AKIA[A-Z2-7]{16}", &["akia"]),
             Rule::with_keywords("inner", r"[A-Z2-7]{10}", &["akia"]),
         ]);
-        let out = redact("key AK1AQYRZ5TMK7VW3XJ42 end", &overlapping).unwrap();
+        let out = redact(concat!("key AKIA", "QYRZ5TMK7VW3XJ42 end"), &overlapping).unwrap();
 
         assert!(!out.text.contains("QYRZ5TMK7V"), "{}", out.text);
         assert!(out.text.starts_with("key [redacted:"), "{}", out.text);
@@ -183,7 +194,7 @@ mod tests {
 
     #[test]
     fn a_secret_at_the_very_start_or_end_is_handled() {
-        let out = redact("AK1AQYRZ5TMK7VW3XJ42", &rules()).unwrap();
+        let out = redact(concat!("AKIA", "QYRZ5TMK7VW3XJ42"), &rules()).unwrap();
         assert_eq!(out.text, "[redacted: aws-access-key]");
     }
 
@@ -192,19 +203,22 @@ mod tests {
         // Byte offsets from the regex must line up with the string, or this
         // panics rather than redacting.
         let out = redact(
-            "café — the runner used AK1AQYRZ5TMK7VW3XJ42 — see Ø notes",
+            concat!(
+                "café — the runner used AKIA",
+                "QYRZ5TMK7VW3XJ42 — see Ø notes"
+            ),
             &rules(),
         )
         .unwrap();
         assert!(out.text.contains("café"));
         assert!(out.text.contains('Ø'));
-        assert!(!out.text.contains("AK1AQYRZ5TMK7VW3XJ42"));
+        assert!(!out.text.contains(concat!("AKIA", "QYRZ5TMK7VW3XJ42")));
     }
 
     #[test]
     fn block_mode_asks_only_whether_there_is_anything_here() {
         assert_eq!(
-            contains_secret("key AK1AQYRZ5TMK7VW3XJ42", &rules()).unwrap(),
+            contains_secret(concat!("key AKIA", "QYRZ5TMK7VW3XJ42"), &rules()).unwrap(),
             Some("aws-access-key".to_string())
         );
         assert_eq!(contains_secret("nothing here", &rules()).unwrap(), None);

@@ -489,7 +489,7 @@ mod value_escape_tests {
     /// is what actually crosses to the window.
     #[test]
     fn the_matched_value_never_reaches_the_report() {
-        const SECRET: &str = "AK1AQYRZ5TMK7VW3XJ42";
+        const SECRET: &str = concat!("AKIA", "QYRZ5TMK7VW3XJ42");
 
         let request = ChatRequest {
             model: "test-model".into(),
@@ -530,13 +530,19 @@ mod value_escape_tests {
         let policy = Policy::with_rules(PrivacyMode::Redact, Rules::broken("table did not load"));
         let request = ChatRequest {
             model: "m".into(),
-            messages: vec![Message::user("the password is AK1AQYRZ5TMK7VW3XJ42")],
+            messages: vec![Message::user(concat!(
+                "the password is AKIA",
+                "QYRZ5TMK7VW3XJ42"
+            ))],
             temperature: None,
             max_tokens: None,
             sources: Vec::new(),
         };
         let message = sanitise(request, &policy).unwrap_err().to_string();
-        assert!(!message.contains("AK1AQYRZ5TMK7VW3XJ42"), "{message}");
+        assert!(
+            !message.contains(concat!("AKIA", "QYRZ5TMK7VW3XJ42")),
+            "{message}"
+        );
     }
 }
 
@@ -545,7 +551,7 @@ mod mode_tests {
     use super::*;
     use crate::ai::provider::Message;
 
-    const SECRET: &str = "AK1AQYRZ5TMK7VW3XJ42";
+    const SECRET: &str = concat!("AKIA", "QYRZ5TMK7VW3XJ42");
 
     fn request_with_secret() -> ChatRequest {
         ChatRequest {

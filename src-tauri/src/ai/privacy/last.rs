@@ -96,13 +96,17 @@ mod tests {
     #[test]
     fn the_recorded_text_is_what_was_sent_markers_and_all() {
         let log = LastRequestLog::default();
-        log.record(&sanitised(
-            "the key was AK1AQYRZ5TMK7VW3XJ42 before rotation",
-        ));
+        log.record(&sanitised(concat!(
+            "the key was AKIA",
+            "QYRZ5TMK7VW3XJ42 before rotation"
+        )));
 
         let last = log.snapshot().unwrap();
         let sent = &last.messages[0].content;
-        assert!(!sent.contains("AK1AQYRZ5TMK7VW3XJ42"), "{sent}");
+        assert!(
+            !sent.contains(concat!("AKIA", "QYRZ5TMK7VW3XJ42")),
+            "{sent}"
+        );
         assert!(sent.contains("[redacted:"), "{sent}");
         assert!(sent.contains("before rotation"), "{sent}");
         assert_eq!(last.report.redacted_count(), 1);

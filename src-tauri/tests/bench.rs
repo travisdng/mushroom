@@ -327,9 +327,11 @@ fn sanitise_cost() {
 
     // And with something to find, since the work is in the matching.
     let mut with_secrets = body.clone();
-    with_secrets.push_str(
-        "\nThe runner used AK1AQYRZ5TMK7VW3XJ42 and ghx_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf.\n",
-    );
+    with_secrets.push_str(concat!(
+        "\nThe runner used AKIA",
+        "QYRZ5TMK7VW3XJ42 and ghp",
+        "_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf.\n"
+    ));
     let policy = Policy::new(PrivacyMode::Redact);
     let with = || ChatRequest {
         model: "test-model".into(),

@@ -49,23 +49,23 @@ struct Planted {
 const PLANTED: &[Planted] = &[
     Planted {
         rule: "aws-access-token",
-        value: "AK1AQYRZ5TMK7VW3XJ42",
+        value: concat!("AKIA", "QYRZ5TMK7VW3XJ42"),
     },
     Planted {
         rule: "github-pat",
-        value: "ghx_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf",
+        value: concat!("ghp", "_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf"),
     },
     Planted {
         rule: "slack-bot-token",
-        value: "xoxz-2345678901-2345678901234-AbCdEfGhIjKlMnOpQrStUvWx",
+        value: concat!("xoxb", "-2345678901-2345678901234-AbCdEfGhIjKlMnOpQrStUvWx"),
     },
     Planted {
         rule: "gcp-api-key",
-        value: "AIzbSyD1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P",
+        value: concat!("AIza", "SyD1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P"),
     },
     Planted {
         rule: "openai-key",
-        value: "sx-proj-9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a",
+        value: concat!("sk-", "proj-9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a"),
     },
     Planted {
         rule: "assigned-secret",
@@ -303,7 +303,7 @@ async fn the_answer_is_still_possible_after_redaction() {
 /// allowed to differ, and only the wire is scrubbed.
 #[tokio::test]
 async fn a_credential_typed_into_the_question_is_not_sent() {
-    const TYPED: &str = "AK1A2345TMK7VW3XJ42Q";
+    const TYPED: &str = concat!("AKIA", "2345TMK7VW3XJ42Q");
 
     let (_dir, root, db) = corpus();
     let (server, bodies) = recording_server().await;

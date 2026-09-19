@@ -41,7 +41,12 @@ jobs:
 
       # --redact so a finding does not print the secret into the CI log, where
       # it would be more exposed than it was in the commit.
-      - run: gitleaks git --redact --verbose
+      #
+      # .gitleaks.toml allowlists the two kinds of file that must contain
+      # credential-shaped text to do their job: the vendored rule table, and
+      # the privacy tests that plant fake credentials to prove they are
+      # stopped. Everything else gets the full default rule set.
+      - run: gitleaks git --redact --verbose --config .gitleaks.toml
 
   check:
     name: Typecheck, build, lint, test

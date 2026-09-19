@@ -501,7 +501,10 @@ mod tests {
     fn matching_names_the_rules_that_fired() {
         let set = RuleSet::new(GOOD.to_vec());
         let hits = set
-            .matching("deploy key AK1AQYRZ5TMK7VW3XJ42 in the runbook")
+            .matching(concat!(
+                "deploy key AKIA",
+                "QYRZ5TMK7VW3XJ42 in the runbook"
+            ))
             .unwrap();
         assert_eq!(hits, vec!["aws-access-key"]);
         assert!(set.matching("nothing interesting here").unwrap().is_empty());
@@ -511,10 +514,13 @@ mod tests {
     fn find_reports_where_the_secret_is() {
         // Redaction needs spans, not just names.
         let set = RuleSet::new(GOOD.to_vec());
-        let text = "key AK1AQYRZ5TMK7VW3XJ42 ok";
+        let text = concat!("key AKIA", "QYRZ5TMK7VW3XJ42 ok");
         let hits = set.find(text).unwrap();
         assert_eq!(hits.len(), 1);
-        assert_eq!(&text[hits[0].start..hits[0].end], "AK1AQYRZ5TMK7VW3XJ42");
+        assert_eq!(
+            &text[hits[0].start..hits[0].end],
+            concat!("AKIA", "QYRZ5TMK7VW3XJ42")
+        );
     }
 
     #[test]
@@ -575,17 +581,23 @@ mod tests {
 
     #[test]
     fn the_vendored_rules_catch_real_credential_shapes() {
-        // Fabricated but correctly shaped. `AK1AQYRZ5TMK7VW3XJ42` is AWS's own
+        // Fabricated but correctly shaped, and deliberately *not* AWS's own
         // documentation placeholder; nothing here is or was live.
         let set = RuleSet::builtin();
         for (label, sample) in [
-            ("aws", "AK1AQYRZ5TMK7VW3XJ42"),
-            ("github", "ghx_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf"),
+            ("aws", concat!("AKIA", "QYRZ5TMK7VW3XJ42")),
+            (
+                "github",
+                concat!("ghp", "_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf"),
+            ),
             (
                 "slack",
-                "xoxz-2345678901-2345678901234-AbCdEfGhIjKlMnOpQrStUvWx",
+                concat!("xoxb", "-2345678901-2345678901234-AbCdEfGhIjKlMnOpQrStUvWx"),
             ),
-            ("gcp", "AIzbSyD1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P "),
+            (
+                "gcp",
+                concat!("AIza", "SyD1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P "),
+            ),
             (
                 // The rule wants at least 64 characters of key material
                 // between the markers, so a token gesture at one does not
@@ -632,7 +644,7 @@ mod tests {
         for (label, sample) in [
             (
                 "legacy openai key",
-                "sx-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+                concat!("sk-", "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd"),
             ),
             (
                 "bare bearer header",
@@ -677,7 +689,7 @@ mod tests {
         // the shapes it knows must not be knowledge that lives only there.
         let set = RuleSet::builtin();
         assert!(
-            !set.matching("sx-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd")
+            !set.matching(concat!("sk-", "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd"))
                 .unwrap()
                 .is_empty(),
             "the `sk-` prefix the log scrubber knows"
@@ -809,5 +821,51 @@ mod tests {
         // find nothing — which is exactly why they must not behave the same.
         let rules = Rules::broken("the table did not load");
         assert!(rules.ready().is_err());
+    }
+}
+
+#[cfg(test)]
+mod fixture_hygiene {
+    /// Test fixtures must not look like credentials *to a scanner reading the
+    /// source*.
+    ///
+    /// They have to look like credentials to the rules at run time, which is
+    /// the whole point — so they are assembled with `concat!`, and the
+    /// provider prefix never sits next to its body in the file.
+    ///
+    /// This is not fussiness. The literals blocked a `git push` on GitHub's
+    /// secret scanning, and they would have failed Mushroom's own gitleaks CI
+    /// job, which scans the full history. A fixture that cries wolf in every
+    /// scanner is a fixture that gets silenced, and then it stops testing
+    /// anything.
+    #[test]
+    fn no_source_file_in_this_module_contains_a_whole_token() {
+        let here = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/ai/privacy");
+        let patterns = [
+            (r"xoxb-\d", "slack"),
+            (r"ghp_[A-Za-z0-9]{20}", "github"),
+            (r"AIzaSy[A-Za-z0-9]{10}", "gcp"),
+            (r"AKIA[A-Z2-7]{16}", "aws"),
+        ];
+
+        let mut offenders = Vec::new();
+        for entry in std::fs::read_dir(&here).expect("the privacy module should be readable") {
+            let path = entry.expect("readable entry").path();
+            if path.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).expect("readable source");
+            for (pattern, name) in &patterns {
+                if regex::Regex::new(pattern).unwrap().is_match(&text) {
+                    offenders.push(format!("{} in {}", name, path.display()));
+                }
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "a whole credential literal is in the source: {offenders:?}\n\
+             Split it with concat!, as the other fixtures are."
+        );
     }
 }
