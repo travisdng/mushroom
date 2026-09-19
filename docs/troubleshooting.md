@@ -100,6 +100,9 @@ To force it by hand, close Mushroom and delete:
 It will be rebuilt on the next launch. The index is disposable by design; the
 Markdown is the only thing that matters.
 
+Your settings live beside it in `config.json`, which holds no secrets — the API
+key is in Windows Credential Manager, and nowhere else.
+
 An index written by a **newer version** of Mushroom is refused rather than
 downgraded — install the newer version again, or delete the file as above.
 
@@ -167,3 +170,62 @@ app.
 Include the output of `Copy Diagnostics` (read it first — see the top of this
 page), what you did, and what you expected instead. The version and your
 Windows build are already in the report.
+
+## A note of mine should never go to the AI
+
+Put this in its frontmatter:
+
+```yaml
+---
+title: My note
+ai: false
+---
+```
+
+`private: true` does the same thing. Either one means the note is never sent to
+an AI endpoint — not as an excerpt, not as a source, not in any privacy mode.
+It stays completely normal otherwise: listed, editable, and found by
+`Search Notes`. What it is kept out of is the network, not your own machine.
+
+For a whole folder, use **Tools → Settings → Privacy** and add it to
+**Never send** — one folder or pattern per line:
+
+```
+personal
+work/credentials/**
+**/secrets.md
+```
+
+When a question matches an excluded note, the AI panel says how many were left
+out, so a short answer is explicable rather than mysterious.
+
+## Was my password sent to the AI?
+
+**Tools → Last AI Request…** shows the exact text of the most recent request,
+with `[redacted: …]` markers where credentials were removed. It is held in
+memory only and never written to disk.
+
+Mushroom checks everything it sends against a list of credential patterns and
+replaces what it recognises. **This is best-effort and will miss things** — it
+recognises the shapes that provider keys take, not every password anybody might
+write. A note that must never leave the machine should be marked `ai: false`;
+that is not a guess, and it applies in every mode.
+
+Three settings, under **Tools → Settings → Privacy**:
+
+| Setting | What it does |
+|---|---|
+| Replace credentials I recognise | The default. Swaps them for a marker and sends the rest |
+| Leave out anything that looks like a credential | Withholds the whole excerpt instead of editing it |
+| Send my notes as they are | No scanning at all. Excluded notes are *still* never sent |
+
+If a key was not redacted, check **Tools → Diagnostics** first — it shows which
+mode was in force and which detection rules are switched off.
+
+## The AI redacted something that was not a secret
+
+It happens: the rules look for credential-shaped text, and occasionally prose
+fits. **Tools → Settings → Privacy → Choose rules…** lists every rule and lets
+you switch one off. Switching a rule off means Mushroom stops looking for that
+kind of credential, so it is worth being specific rather than turning off
+several.

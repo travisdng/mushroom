@@ -147,6 +147,11 @@ everything goes through a Tauri command.
 | Logs | `%APPDATA%\Mushroom\logs\`, one file per day, seven days |
 | API keys | Windows Credential Manager — never on disk in a file |
 
+Notes you mark `ai: false` are never sent to an AI endpoint, and everything
+that *is* sent is checked for passwords and keys first. See
+[docs/troubleshooting.md](docs/troubleshooting.md#a-note-of-mine-should-never-go-to-the-ai)
+for what that does and does not promise.
+
 Only the first of those matters. The index is built from your notes and can be
 deleted at any time; settings are a small JSON file; the logs never contain
 note content or keys.
