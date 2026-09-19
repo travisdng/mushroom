@@ -8,6 +8,46 @@ Add entries here as work lands. On release, move the Unreleased entries into a
 dated version section and write the matching file in
 [`docs/releases/`](docs/releases/).
 
+## [1.1.0] — 2026-09-19
+
+Milestone 08 — the AI privacy gate. See
+[docs/releases/v1.1.0.md](docs/releases/v1.1.0.md).
+
+### Added
+- **Notes can be kept out of the AI entirely.** `ai: false` or `private: true`
+  in a note's frontmatter means it is never sent to an AI endpoint — not as an
+  excerpt, not as a source, in no privacy mode. The key is read and never
+  written, so it survives saves. Excluded notes stay completely ordinary
+  otherwise: listed, editable, and found by `Search Notes`. The note list marks
+  them `no AI` and the editor says so.
+- **Folder exclusions**, under `Tools → Settings → Privacy`. One folder or
+  pattern per line; `**` matches any depth. A malformed pattern is reported
+  rather than silently ignored. `.trash` is excluded with nothing configured.
+- **Credential detection on everything sent** — 225 patterns, vendored from
+  gitleaks and extended, replacing what they recognise with
+  `[redacted: aws-access-token]`. The marker names the kind rather than
+  blanking the text, so answers still make sense.
+- **`Tools → Last AI Request…`** — the exact text of the most recent request,
+  markers in place. In memory only, never written to disk.
+- **Three privacy postures**: replace what is recognised (default), withhold
+  anything that looks like a credential, or send as-is. The last asks first and
+  names the endpoint, and resets if the endpoint changes.
+- **A notice when the AI endpoint changes**, naming where note content will go.
+- **Diagnostics** shows the privacy mode, exclusion count and any detection
+  rules switched off.
+- **Secret scanning in CI** for this repository, so a key cannot be committed.
+
+### Fixed
+- **`log_prompts` wrote credentials to a log file.** Turning it on to debug a
+  bad answer wrote every retrieved excerpt — keys included — to
+  `logs\mushroom.log`. It now logs sanitised text, and the setting says plainly
+  that it writes note content to disk.
+
+### Known limits
+- Detection is best-effort and will miss things; `password: hunter2` is not
+  caught, deliberately. Marking a note is the control that works every time.
+- Nothing protects what was sent before this release.
+
 ## [1.0.1] — 2026-09-18
 
 See [docs/releases/v1.0.1.md](docs/releases/v1.0.1.md).
