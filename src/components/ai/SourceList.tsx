@@ -5,10 +5,17 @@ import type { Citation, RetrievedPassage } from "../../types/aiSearch";
 /**
  * Where the answer came from, and what else was looked at.
  *
- * Each source shows the excerpt text that was actually sent (R5.3). That is
- * the only defence against a model that cites `[1]` and then describes
- * something the note does not say — the citation check cannot catch it, but a
- * reader can.
+ * Each source shows the excerpt **as retrieved from the note** (R5.3), which
+ * is the only defence against a model that cites `[1]` and then describes
+ * something the note does not say — the citation check cannot catch that, but
+ * a reader can.
+ *
+ * It is deliberately *not* the text that went on the wire. Since spec 08 the
+ * two can differ: credentials are replaced with markers, and in `block` mode
+ * the excerpt may not be sent at all. Showing the user their own note here is
+ * right — it is their note, on their machine — but it means this panel cannot
+ * answer "what did Mushroom send?". `Tools → Last AI Request…` answers that,
+ * and is the only thing that should be read as a record of what left.
  */
 export function SourceList({
   used,
@@ -54,7 +61,7 @@ export function SourceList({
                 {citation.folder ? (
                   <span className="sources__folder"> · {citation.folder}</span>
                 ) : null}
-                <div className="sources__excerpt selectable">
+                <div className="sources__excerpt selectable" title="The excerpt as it is in your note. What was sent may differ — see Tools → Last AI Request…">
                   {citation.text.trim()}
                 </div>
               </li>

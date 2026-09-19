@@ -42,7 +42,14 @@ pub struct Citation {
     pub heading_path: String,
     pub line_start: u32,
     pub line_end: u32,
-    /// The excerpt text as actually sent. Shown beside each source so the user
+    /// The excerpt as retrieved from the note, **before** the privacy gate.
+    ///
+    /// Not what went on the wire: since spec 08 credentials are replaced with
+    /// markers, and in `block` mode the excerpt may be withheld entirely. This
+    /// is shown locally so the user can check the model against their own
+    /// note; `AI → Last Request…` is the record of what was sent.
+    ///
+    /// Shown beside each source so the user
     /// can check the model against what it was given (R5.3).
     pub text: String,
 }
