@@ -353,6 +353,12 @@ impl RuleSet {
 /// documentation says detection is best-effort and exclusion is the control
 /// that actually works.
 pub fn looks_random(value: &str) -> bool {
+    // Punctuation *beside* a word is not evidence of anything. A scan of the
+    // project's own notes caught `secret: confidential\`` — the trailing
+    // backtick from Markdown made an ordinary English word satisfy the
+    // "contains a symbol" test. Only punctuation *inside* a token counts.
+    let value = value.trim_matches(|c: char| !c.is_alphanumeric());
+
     let length = value.chars().count();
     if length < 12 {
         return false;
@@ -755,6 +761,19 @@ mod tests {
             .matching("password: hunter2")
             .unwrap()
             .contains(&"assigned-secret"));
+    }
+
+    #[test]
+    fn punctuation_beside_a_word_is_not_evidence_of_randomness() {
+        // Found by scanning the project's own notes: Markdown backticks and
+        // sentence punctuation cling to the captured value, and a bare
+        // `has_symbol` test let an ordinary word through because of them.
+        assert!(!looks_random("confidential`"));
+        assert!(!looks_random("`confidential`"));
+        assert!(!looks_random("documentation."));
+        assert!(!looks_random("(authorization)"));
+        // But a symbol inside the token still counts.
+        assert!(looks_random("xQ7v-Mz2Lp9rTn4"));
     }
 
     #[test]

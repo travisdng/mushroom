@@ -265,3 +265,87 @@ fn retrieval_exclusion_cost() {
         report(&format!("retrieve_passages \u{2014} {label}"), samples);
     }
 }
+
+/// Spec 08 R7.1 — sanitising a request must take under 5 ms.
+///
+/// This is on the path of every question, so it is the number that decides
+/// whether the gate is felt. Needs no corpus: the text is built here so the
+/// measurement is the same on any machine.
+#[test]
+#[ignore = "measurement"]
+fn sanitise_cost() {
+    use mushroom_lib::ai::privacy::{sanitise, Policy, PrivacyMode, RuleSet};
+    use mushroom_lib::ai::provider::{ChatRequest, Message};
+
+    // ~24 KB of plausible note prose, which is what a full context looks like.
+    let paragraph = "The orchestrator stopped the node pool while transcript work remained. \
+         Capacity planning assumes no GPU failure during the drain window, and the \
+         runbook says to quiet the queue first. Ask Priya before changing the schedule. ";
+    let mut body = String::new();
+    while body.len() < 24 * 1024 {
+        body.push_str(paragraph);
+    }
+    println!("context: {} bytes", body.len());
+
+    // Compiling the shipped table, which startup deliberately does not do.
+    let started = Instant::now();
+    let set = RuleSet::builtin();
+    println!(
+        "building the rule set: {} rules in {} \u{b5}s",
+        set.len(),
+        started.elapsed().as_micros()
+    );
+
+    let request = || ChatRequest {
+        model: "test-model".into(),
+        messages: vec![
+            Message::system(body.clone()),
+            Message::user("what happened?"),
+        ],
+        temperature: None,
+        max_tokens: None,
+        sources: Vec::new(),
+    };
+
+    for (label, mode) in [
+        ("clean prose", PrivacyMode::Redact),
+        ("privacy off", PrivacyMode::Off),
+    ] {
+        let policy = Policy::new(mode);
+        // Warm: the first call compiles whichever rules the text trips.
+        let _ = sanitise(request(), &policy).unwrap();
+
+        let mut samples = Vec::new();
+        for _ in 0..20 {
+            let started = Instant::now();
+            let out = sanitise(request(), &policy).unwrap();
+            samples.push(started.elapsed().as_micros());
+            std::hint::black_box(out.report().redacted_count());
+        }
+        report(&format!("sanitise \u{2014} {label}"), samples);
+    }
+
+    // And with something to find, since the work is in the matching.
+    let mut with_secrets = body.clone();
+    with_secrets.push_str(
+        "\nThe runner used AK1AQYRZ5TMK7VW3XJ42 and ghx_016C7Ag8Dj2pRlP4Xt6Yn9Qv3Kw5Zb7Hd1Mf.\n",
+    );
+    let policy = Policy::new(PrivacyMode::Redact);
+    let with = || ChatRequest {
+        model: "test-model".into(),
+        messages: vec![Message::system(with_secrets.clone())],
+        temperature: None,
+        max_tokens: None,
+        sources: Vec::new(),
+    };
+    let _ = sanitise(with(), &policy).unwrap();
+
+    let mut samples = Vec::new();
+    for _ in 0..20 {
+        let started = Instant::now();
+        let out = sanitise(with(), &policy).unwrap();
+        samples.push(started.elapsed().as_micros());
+        assert_eq!(out.report().redacted_count(), 2);
+    }
+    report("sanitise \u{2014} two credentials found", samples);
+}
